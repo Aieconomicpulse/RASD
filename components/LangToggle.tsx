@@ -2,17 +2,18 @@
 import { useRouter } from 'next/navigation';
 import type { Lang } from '@/lib/types';
 
-export default function LangToggle({ lang }: { lang: Lang }) {
+export default function LangToggle({ lang, label }: { lang: Lang; label: string }) {
   const router = useRouter();
   const other: Lang = lang === 'ar' ? 'en' : 'ar';
   return (
     <button
       type="button"
+      lang={other}
       onClick={() => { document.cookie = `rasd_lang=${other}; path=/; max-age=31536000; samesite=lax`; router.refresh(); }}
-      className="rounded-md border border-line px-2.5 py-1 text-xs font-semibold text-mist-300 hover:border-mist-500 hover:text-white"
-      aria-label={other === 'ar' ? 'العربية' : 'English'}
+      className="rounded-full border border-rule px-3.5 py-1.5 text-base font-medium text-ink hover:border-ink-3"
+      data-lang-toggle
     >
-      {other === 'ar' ? 'عربي' : 'EN'}
+      {label}
     </button>
   );
 }

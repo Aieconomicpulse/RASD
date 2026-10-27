@@ -7,3 +7,4 @@ data/snapshot.json
 data/brief-*.json
 *.log
 .DS_Store
+*.tsbuildinfo

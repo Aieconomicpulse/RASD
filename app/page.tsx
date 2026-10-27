@@ -1,255 +1,435 @@
 import Link from 'next/link';
 import { currentLang } from '@/lib/auth';
 import { getSituation } from '@/lib/situation';
-import { t, T } from '@/lib/i18n';
+import { fmtDate, HIJRI_LOCALE } from '@/lib/i18n';
 import { BAND_AR } from '@/lib/sentiment';
-import type { Category, HormuzGrade, Lang } from '@/lib/types';
-import Ticker from '@/components/Ticker';
-import Panel from '@/components/Panel';
-import Stat, { Delta } from '@/components/Stat';
-import StatusChip from '@/components/StatusChip';
-import Sparkline from '@/components/Sparkline';
-import AlertList from '@/components/AlertList';
+import { PILLAR_NAME, PRIORITY_LABEL } from '@/lib/strategy';
+import type { L, Lang, Priority } from '@/lib/types';
+import StatusPill, { PriorityMark, StatusShape } from '@/components/StatusPill';
+import GulfMap from '@/components/GulfMap';
+import TrendChart from '@/components/TrendChart';
+import { Delta, DivBar, Figure, Grade, Kpi, Meter } from '@/components/Figures';
 
 export const revalidate = 900;
 
-const GRADE_CLASS: Record<HormuzGrade, string> = { HIGH: 'chip-alert', MEDIUM: 'chip-watch', LOW: 'chip-normal', NONE: 'bg-ink-700 text-mist-300', INDEX: 'bg-ink-700 text-mist-300' };
 const f = (n: number, d = 1) => n.toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
-const fmtDate = (iso: string, lang: Lang) => new Date(`${iso}T00:00:00Z`).toLocaleDateString(lang === 'ar' ? 'ar-SA-u-nu-latn' : 'en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' });
+const signed = (n: number, d = 1) => `${n > 0 ? '+' : n < 0 ? '−' : ''}${f(Math.abs(n), d)}`;
+const usd = (m: number, lang: Lang) => (m >= 1000 ? (lang === 'ar' ? `${f(m / 1000, 1)} مليار دولار` : `$${f(m / 1000, 1)}B`) : lang === 'ar' ? `${f(m, 0)} مليون دولار` : `$${f(m, 0)}M`);
+const costAr = (c: string) => `${c.replace('$', '').replace('/t', '')} دولاراً للطن`;
 
-function Grade({ g, lang }: { g: HormuzGrade; lang: Lang }) {
-  return <span className={`chip ${GRADE_CLASS[g]} !tracking-normal`}>{lang === 'ar' ? 'هرمز' : 'Hz'} {T.hzGrade[g][lang]}</span>;
+/** Page copy — every string the situation page shows, in both languages. */
+const C = {
+  scorecard: { en: 'Where the four pillars stand', ar: 'أين تقف الركائز الأربع' },
+  colPillar: { en: 'Pillar', ar: 'الركيزة' }, colToday: { en: 'Today', ar: 'اليوم' }, colMeaning: { en: 'What it means', ar: 'ماذا يعني' }, colNext: { en: 'What would change the status', ar: 'ما الذي يغيّر الحالة' },
+  noNext: { en: 'At the top of the scale.', ar: 'في أعلى السلّم.' },
+  decisions: { en: 'Decisions for this week', ar: 'قرارات هذا الأسبوع' },
+  decisionsDek: { en: 'Ranked by urgency. Each one rests on the figures further down this page.', ar: 'مرتّبة حسب الأولوية، وكلّ منها مبني على الأرقام الواردة أدناه في هذه الصفحة.' },
+  nothing: { en: 'Nothing at this level today.', ar: 'لا شيء في هذا المستوى اليوم.' },
+  fromDesk: { en: 'From the desk', ar: 'من المكتب' },
+  mapTitle: { en: 'The Kingdom between two seas: shipping lanes, ports and the roads east', ar: 'المملكة بين بحرين: ممرات الملاحة والموانئ والطرق نحو الشرق' },
+  lgHormuz: { en: 'Shipping lane through Hormuz', ar: 'ممر الملاحة عبر هرمز' },
+  lgOpen: { en: 'Lanes that avoid Hormuz', ar: 'ممرات تتجنب هرمز' },
+  lgRoad: { en: 'Roads into the Kingdom and on to the Eastern Province', ar: 'طرق الدخول إلى المملكة ونحو المنطقة الشرقية' },
+  mapNote: { en: 'Schematic, not to scale. Routes as modelled by the KSA platform. The Hormuz status is set by the desk each morning.', ar: 'رسم تخطيطي غير مطابق للمقياس. المسارات وفق نموذج المنصة السعودية، وحالة هرمز يحدّدها المكتب كل صباح.' },
+  importsVia: { en: 'of the Kingdom’s imports pass Hormuz', ar: 'من واردات المملكة تمرّ عبر هرمز' },
+  critical: { en: 'critical products, over 70% through the strait', ar: 'منتجاً حرجاً، أكثر من 70% منها عبر المضيق' },
+  foodVia: { en: 'of food imports pass Hormuz', ar: 'من واردات الغذاء تمرّ عبر هرمز' },
+  portTitle: { en: 'Port calls a week since January 2025', ar: 'رسو السفن أسبوعياً منذ يناير 2025' },
+  portLabel: { en: 'Port calls', ar: 'رسو السفن' },
+  avg2025: { en: '2025 average', ar: 'متوسط 2025' },
+  event: { en: '28 Feb: Hormuz disrupted', ar: '28 فبراير: اضطراب هرمز' },
+  corridors: { en: 'Ways in that avoid Hormuz', ar: 'مسارات دخول تتجنب هرمز' },
+  corridorsDek: { en: 'Road distance, time and cost on to the Eastern Province.', ar: 'المسافة البرية والمدة والتكلفة حتى المنطقة الشرقية.' },
+  days: { en: 'days', ar: 'أيام' },
+  exposedTitle: { en: 'Food imports most exposed to Hormuz', ar: 'واردات الغذاء الأكثر تعرضاً لهرمز' },
+  exposedDek: {
+    en: 'In the platform’s route model these imports land at Dammam through the strait. The same cargo can land at the Red Sea ports, which makes their berths, the road east and the Bab el-Mandeb approach the points to protect.',
+    ar: 'في نموذج المسارات لدى المنصة، تصل هذه الواردات إلى الدمام عبر المضيق. ويمكن للشحنات نفسها أن تصل إلى موانئ البحر الأحمر، ما يجعل مراسيها والطريق نحو الشرق ومدخل باب المندب نقاطاً يجب حمايتها.',
+  },
+  colProduct: { en: 'Product', ar: 'المنتج' }, colThrough: { en: 'Through Hormuz a year', ar: 'عبر هرمز سنوياً' }, colMain: { en: 'Main supplier', ar: 'المورد الرئيسي' }, colOption: { en: 'Hormuz-free option', ar: 'بديل دون هرمز' },
+  already: { en: 'already ships', ar: 'تشحن فعلاً' }, suggested: { en: 'Suggested', ar: 'مقترح' }, noScale: { en: 'No alternative supplier at scale; stock and re-routing are the hedge.', ar: 'لا مورد بديلاً بحجم كافٍ؛ المخزون وإعادة التوجيه هما صمام الأمان.' },
+  ofImports: { en: 'of imports', ar: 'من الواردات' },
+  foodChart: { en: 'Food index and overall CPI, weekly, base 100', ar: 'مؤشر الغذاء والمؤشر العام، أسبوعياً، الأساس 100' },
+  food: { en: 'Food index', ar: 'مؤشر الغذاء' }, cpi: { en: 'Overall CPI', ar: 'المؤشر العام' },
+  catTitle: { en: 'Food categories this week', ar: 'فئات الغذاء هذا الأسبوع' },
+  colCat: { en: 'Category', ar: 'الفئة' }, colIdx: { en: 'Index', ar: 'المؤشر' }, colWow: { en: 'Week on week', ar: 'أسبوعياً' }, colHz: { en: 'Hormuz exposure', ar: 'التعرّض لهرمز' },
+  basket: { en: 'The tracked basket', ar: 'السلة المتابَعة' },
+  stockouts: { en: 'Stock-outs are not tracked yet. They need an availability flag in the retail price scraper.', ar: 'نفاد المخزون غير متابَع بعد، ويتطلب مؤشر توافر في جامع أسعار التجزئة.' },
+  gdpChart: { en: 'GDP nowcast, annualised, $ trillion', ar: 'تقدير الناتج الآني السنوي، تريليون دولار' },
+  total: { en: 'Total', ar: 'الإجمالي' }, nonOil: { en: 'Non-oil', ar: 'غير النفطي' },
+  spending: { en: 'Consumer spending', ar: 'الإنفاق الاستهلاكي' }, employment: { en: 'Employment', ar: 'التوظيف' }, pmi: { en: 'PMI', ar: 'مؤشر مديري المشتريات' },
+  invest: { en: 'Investment confidence', ar: 'ثقة الاستثمار' }, brent: { en: 'Brent, $ a barrel', ar: 'برنت، دولار للبرميل' }, tasi: { en: 'TASI', ar: 'تاسي' },
+  sama: { en: 'SAMA repo rate', ar: 'سعر إعادة الشراء (ساما)' }, sentiment: { en: 'Press sentiment', ar: 'معنويات الصحافة' },
+  wow: { en: 'on the week', ar: 'أسبوعياً' }, yoy: { en: 'on a year ago', ar: 'سنوياً' }, m4: { en: 'over four weeks', ar: 'خلال أربعة أسابيع' }, preWar: { en: 'on pre-war', ar: 'عن ما قبل الحرب' },
+  expansion: { en: 'Above 50: expanding', ar: 'فوق 50: توسّع' }, contraction: { en: 'Below 50: contracting', ar: 'دون 50: انكماش' },
+  live: { en: 'live', ar: 'مباشر' }, headlines: { en: 'Headlines behind today’s reading', ar: 'العناوين وراء قراءة اليوم' },
+  warTitle: { en: 'Before and since 28 February', ar: 'قبل 28 فبراير وبعده' },
+  warDek: { en: 'Average of Nov 2025 to Feb 2026 against the average since.', ar: 'متوسط نوفمبر 2025 حتى فبراير 2026 مقابل المتوسط منذ ذلك الحين.' },
+  colMeasure: { en: 'Measure', ar: 'المقياس' }, colBefore: { en: 'Before', ar: 'قبل' }, colSince: { en: 'Since', ar: 'منذ' }, colChange: { en: 'Change', ar: 'التغيّر' },
+  method: { en: 'How this picture is made', ar: 'كيف تُبنى هذه الصورة' },
+  methodLink: { en: 'Sources and status rules', ar: 'المصادر وقواعد الحالة' },
+  viewData: { en: 'View the data', ar: 'عرض البيانات' }, week: { en: 'Week', ar: 'الأسبوع' },
+} satisfies Record<string, L>;
+
+function SectionHead({ pills, title, dek, lang }: { pills: { status: Parameters<typeof StatusPill>[0]['status']; name: L }[]; title: L; dek: L; lang: Lang }) {
+  return (
+    <header className="max-w-5xl">
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+        {pills.map((p, i) => <span key={i} className="inline-flex items-center gap-2.5"><StatusPill status={p.status} lang={lang} /><span className="text-lg font-medium text-ink-2">{p.name[lang]}</span></span>)}
+      </div>
+      <h2 className="section-title mt-4">{title[lang]}</h2>
+      <p className="mt-3 max-w-3xl text-lg text-ink-2">{dek[lang]}</p>
+    </header>
+  );
 }
 
-function CategoryRow({ c, lang }: { c: Category; lang: Lang }) {
+function DataTable({ lang, head, rows }: { lang: Lang; head: string[]; rows: (string | number)[][] }) {
   return (
-    <li className="flex items-center justify-between gap-2 text-sm">
-      <span className="flex min-w-0 items-center gap-2"><span className="truncate text-mist-100">{lang === 'ar' ? c.label_ar : c.label_en}</span><Grade g={c.hormuz} lang={lang} /></span>
-      <span className="flex shrink-0 items-center gap-2"><span className="num text-xs text-mist-500">{f(c.value)}</span><Delta value={c.wow} invert /></span>
-    </li>
+    <details className="no-print mt-3 text-sm">
+      <summary className="cursor-pointer text-ink-2 hover:text-ink">{C.viewData[lang]}</summary>
+      <div className="mt-2 max-h-72 overflow-auto rounded-lg border border-rule">
+        <table className="tnum w-full text-start">
+          <thead className="sticky top-0 bg-sunken"><tr>{head.map((h) => <th key={h} className="px-3 py-1.5 text-start font-medium text-ink-2">{h}</th>)}</tr></thead>
+          <tbody>{rows.map((r, i) => <tr key={i} className="border-t border-rule">{r.map((c, j) => <td key={j} className="px-3 py-1.5 text-ink">{c}</td>)}</tr>)}</tbody>
+        </table>
+      </div>
+    </details>
   );
 }
 
 export default async function SituationPage() {
   const lang = await currentLang();
   const s = await getSituation();
+  const st = s.strategy!;
   const ar = lang === 'ar';
-  const asOf = new Date(s.asOf);
-  const stamp = asOf.toLocaleString(ar ? 'ar-SA-u-nu-latn' : 'en-GB', { timeZone: 'Asia/Riyadh', weekday: 'short', day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  const tr = (l: L) => l[lang];
   const { shelves: sh, supply: su, confidence: co, economy: ec } = s;
-  const hz = T.hormuzState[su.hormuz.state][lang];
-  const sentColor = co.sentiment.score >= 0.2 ? 'text-pulse-green' : co.sentiment.score > -0.2 ? 'text-pulse-amber' : 'text-pulse-red';
+
+  const asOf = new Date(s.asOf);
+  const day = asOf.toLocaleDateString(ar ? 'ar-SA-u-nu-latn-ca-gregory' : 'en-GB', { timeZone: 'Asia/Riyadh', weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  const time = asOf.toLocaleTimeString('en-GB', { timeZone: 'Asia/Riyadh', hour: '2-digit', minute: '2-digit' });
+  const hijri = ar ? asOf.toLocaleDateString(HIJRI_LOCALE, { timeZone: 'Asia/Riyadh', day: 'numeric', month: 'long', year: 'numeric' }) : null;
+  const short = (iso: string) => fmtDate(iso, lang, { day: 'numeric', month: 'long' });
+  const freshness = ar
+    ? `المؤشرات الأسبوعية حتى ${short(co.asOf)}؛ أسعار الغذاء حتى ${short(sh.asOf)}؛ معنويات الصحافة حتى ${short(co.sentiment.date)}${co.sentiment.live ? ' (مباشر)' : ''}.`
+    : `Weekly indicators to ${short(co.asOf)}; food prices to ${short(sh.asOf)}; press sentiment to ${short(co.sentiment.date)}${co.sentiment.live ? ' (live)' : ''}.`;
+  const desk = s.alerts.filter((a) => a.fromDesk);
+  const priorities: Priority[] = ['act', 'prepare', 'monitor'];
+  const rule: Record<Priority, string> = { act: 'border-st-alert', prepare: 'border-st-watch', monitor: 'border-ink-3' };
+  const catMax = Math.max(4, ...sh.categories.map((c) => Math.abs(c.wow)));
+  const warRows = [
+    { key: 'food', label: { en: 'Food index', ar: 'مؤشر الغذاء' }, pre: sh.sinceWar.foodPre, post: sh.sinceWar.foodPost, digits: 1, good: 'down' as const },
+    ...ec.sinceWar.rows.map((r) => ({ key: r.key, label: { en: r.label_en, ar: r.label_ar }, pre: r.pre, post: r.post, digits: r.digits, good: (r.key === 'oil' ? 'none' : 'up') as 'up' | 'down' | 'none' })),
+  ];
+  const warMax = Math.max(10, ...warRows.map((r) => Math.abs(((r.post - r.pre) / Math.abs(r.pre || 1)) * 100)));
+  const ex = su.exposure;
 
   return (
     <main>
-      <Ticker snap={s} />
-      <div className="mx-auto max-w-7xl px-4 pb-10 pt-6">
-        {/* Masthead */}
-        <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-          <div>
-            <div className="label">{t(lang, 'overall')} · {t(lang, 'asOf')} {stamp} {t(lang, 'riyadh')}</div>
-            <h1 className="mt-2 max-w-5xl text-2xl font-semibold leading-tight text-white md:text-[1.7rem] md:leading-tight">{ar ? s.overall.headline_ar : s.overall.headline_en}</h1>
+      {/* ---------------------------------------------------------------- the bottom line */}
+      <section className="wrap pb-10 pt-10 md:pt-14">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
+          <StatusPill status={s.overall.status} lang={lang} size="lg" />
+          <span className="text-lg text-ink-2">{day}, {time} {ar ? 'بتوقيت الرياض' : 'Riyadh time'}{hijri ? <span className="text-ink-3"> ({hijri})</span> : null}</span>
+        </div>
+        <h1 className={`mt-6 max-w-5xl font-display font-semibold tracking-tight text-ink ${ar ? 'text-5xl font-bold leading-[1.25] tracking-normal md:text-[3.5rem]' : 'text-5xl md:text-6xl lg:text-[4.5rem] lg:leading-[1]'}`}>{tr(st.headline)}</h1>
+        <p className="mt-5 max-w-4xl text-2xl leading-snug text-ink-2 md:text-[1.875rem] md:leading-[1.3]">{tr(st.standfirst)}</p>
+        <p className="mt-6 text-base text-ink-3">{freshness}</p>
+        {desk.length > 0 && (
+          <div className="mt-6 max-w-4xl border-s-4 border-accent ps-4">
+            <div className="eyeline">{tr(C.fromDesk)}</div>
+            <ul className="mt-1 space-y-1 text-lg">{desk.map((a, i) => <li key={i}>{ar ? a.text_ar : a.text_en}</li>)}</ul>
           </div>
-          <div className="flex items-center gap-3">
-            <StatusChip status={s.overall.status} lang={lang} pulse />
-            <Link href="/brief" className="rounded-md bg-white px-3 py-1.5 text-xs font-semibold text-ink-950 hover:bg-mist-100">{t(lang, 'brief')} →</Link>
+        )}
+      </section>
+
+      {/* ---------------------------------------------------------------- scorecard */}
+      <section className="wrap" aria-labelledby="scorecard">
+        <h2 id="scorecard" className="sr-only">{tr(C.scorecard)}</h2>
+        <div className="border-t-2 border-ink">
+          <div className="hidden grid-cols-12 gap-6 border-b border-rule py-3 text-sm font-medium text-ink-3 lg:grid">
+            <div className="col-span-3">{tr(C.colPillar)}</div><div className="col-span-2">{tr(C.colToday)}</div><div className="col-span-4">{tr(C.colMeaning)}</div><div className="col-span-3">{tr(C.colNext)}</div>
+          </div>
+          {st.scorecard.map((r) => (
+            <div key={r.pillar} className="grid grid-cols-1 gap-x-6 gap-y-3 border-b border-rule py-6 lg:grid-cols-12 lg:items-start">
+              <div className="flex items-center justify-between gap-3 lg:col-span-3 lg:block">
+                <div className="text-xl font-semibold text-ink">{tr(r.name)}</div>
+                <div className="lg:mt-2"><StatusPill status={r.status} lang={lang} /></div>
+              </div>
+              <div className="lg:col-span-2">
+                <div className="figure text-4xl leading-none"><bdi dir="ltr">{r.value}</bdi></div>
+                <div className="mt-1.5 text-base text-ink-2">{tr(r.unit)}</div>
+              </div>
+              <p className="text-lg leading-snug text-ink lg:col-span-4">{tr(r.meaning)}</p>
+              <div className="lg:col-span-3">
+                <div className="text-sm font-medium text-ink-3 lg:hidden">{tr(C.colNext)}</div>
+                {r.next ? (
+                  <>
+                    <div className="mt-0.5 flex items-start gap-2 text-lg leading-snug text-ink">
+                      <StatusShape status={r.next.level} size={13} className={`mt-[0.4rem] ${r.next.level === 'critical' ? 'text-st-critical' : r.next.level === 'alert' ? 'text-st-alert' : 'text-st-watch'}`} />
+                      <span>{tr(r.next.text)}</span>
+                    </div>
+                    <div className="mt-1 ps-[1.3rem] text-base text-ink-3">{tr(r.next.now)}</div>
+                  </>
+                ) : <div className="text-lg text-ink-3">{tr(C.noNext)}</div>}
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ---------------------------------------------------------------- decisions */}
+      <section className="wrap mt-20" aria-labelledby="decisions">
+        <h2 id="decisions" className="section-title">{tr(C.decisions)}</h2>
+        <p className="mt-3 max-w-3xl text-lg text-ink-2">{tr(C.decisionsDek)}</p>
+        <div className="mt-10 grid gap-10 lg:grid-cols-3 lg:gap-8">
+          {priorities.map((p) => {
+            const items = st.decisions.filter((d) => d.priority === p);
+            return (
+              <div key={p} className={`border-t-4 pt-4 ${rule[p]}`}>
+                <PriorityMark priority={p} label={tr(PRIORITY_LABEL[p])} />
+                {items.length ? (
+                  <ol className="mt-5 space-y-8">
+                    {items.map((d) => (
+                      <li key={d.id}>
+                        <h3 className="text-[1.375rem] font-semibold leading-snug text-ink">{tr(d.title)}</h3>
+                        <p className="mt-2 text-base leading-relaxed text-ink-2">{tr(d.body)}</p>
+                        <div className="mt-2 text-sm text-ink-3">{tr(PILLAR_NAME[d.pillar])}</div>
+                      </li>
+                    ))}
+                  </ol>
+                ) : <p className="mt-5 text-base text-ink-3">{tr(C.nothing)}</p>}
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* ---------------------------------------------------------------- supply and routes */}
+      <section className="wrap mt-24" id="supply">
+        <SectionHead lang={lang} pills={[{ status: su.status, name: PILLAR_NAME.supply }]} title={st.sections.supply.title} dek={st.sections.supply.dek} />
+        <div className="mt-10 grid gap-10 lg:grid-cols-12">
+          <figure className="min-w-0 lg:col-span-8">
+            <div className="overflow-x-auto rounded-2xl border border-rule bg-sea">
+              <div className="min-w-[600px]"><GulfMap lang={lang} state={su.hormuz.state} title={tr(C.mapTitle)} /></div>
+            </div>
+            <figcaption className="mt-4 space-y-2 text-base text-ink-2">
+              <div className="flex flex-wrap gap-x-6 gap-y-2">
+                <span className="inline-flex items-center gap-2"><svg width="34" height="8" aria-hidden><line x1="2" y1="4" x2="32" y2="4" stroke={su.hormuz.state === 'closed' ? '#d03b3b' : su.hormuz.state === 'restricted' ? '#ec835a' : '#0ca30c'} strokeWidth="3.5" strokeDasharray={su.hormuz.state === 'open' ? undefined : '8 5'} strokeLinecap="round" /></svg>{tr(C.lgHormuz)}: {ar ? { open: 'مفتوح', restricted: 'مقيّد', closed: 'مغلق' }[su.hormuz.state] : su.hormuz.state}</span>
+                <span className="inline-flex items-center gap-2"><svg width="34" height="8" aria-hidden><line x1="2" y1="4" x2="32" y2="4" stroke="#0ca30c" strokeWidth="3" strokeLinecap="round" /></svg>{tr(C.lgOpen)}</span>
+                <span className="inline-flex items-center gap-2"><svg width="34" height="8" aria-hidden><line x1="2" y1="4" x2="32" y2="4" stroke="rgb(var(--accent))" strokeWidth="3" strokeLinecap="round" /></svg>{tr(C.lgRoad)}</span>
+              </div>
+              <p className="text-sm text-ink-3">{tr(C.mapNote)}{su.hormuz.note_en ? ` ${ar ? su.hormuz.note_ar : su.hormuz.note_en}` : ''}</p>
+            </figcaption>
+          </figure>
+          <div className="space-y-10 lg:col-span-4">
+            <Figure value={`${f(ex.importsViaHormuzPct)}%`} label={tr(C.importsVia)} note={ar ? `${f(ex.importsViaHormuzUsdB, 0)} من ${f(ex.importsTotalUsdB, 0)} مليار دولار سنوياً، كومتريد ${ex.comtradeYear}` : `$${f(ex.importsViaHormuzUsdB, 0)}B of $${f(ex.importsTotalUsdB, 0)}B a year, UN Comtrade ${ex.comtradeYear}`} />
+            <Figure value={ex.criticalProducts.toLocaleString('en-US')} label={tr(C.critical)} note={ar ? `من أصل ${ex.productsCovered.toLocaleString('en-US')} منتجاً مستورداً` : `of ${ex.productsCovered.toLocaleString('en-US')} products imported`} />
+            <Figure value={`${f(ex.foodViaHormuzPct)}%`} label={tr(C.foodVia)} note={ar ? `${f(ex.foodViaHormuzUsdB, 1)} من ${f(ex.foodImportsUsdB, 1)} مليار دولار` : `$${f(ex.foodViaHormuzUsdB, 1)}B of $${f(ex.foodImportsUsdB, 1)}B`} />
           </div>
         </div>
 
-        {/* The three questions */}
-        <div className="mt-6 grid gap-4 lg:grid-cols-3">
-          {/* 01 · Shelves & prices */}
-          <Panel lang={lang} index="01" title={t(lang, 'shelves')} question={t(lang, 'shelvesQ')} status={sh.status} sample={sh.sample} source={sh.source}>
-            <div className="grid grid-cols-2 gap-4">
-              <Stat big label={t(lang, 'foodCpi')} value={sh.foodCpi.value} delta={sh.foodCpi.wow} deltaLabel={t(lang, 'wow')} invert>
-                <span className="num">·</span><Delta value={sh.foodCpi.m4} invert /><span>{t(lang, 'm4')}</span>
-              </Stat>
-              <Stat big label={t(lang, 'cpiOverall')} value={sh.cpiOverall.value} delta={sh.cpiOverall.wow} deltaLabel={t(lang, 'wow')} invert>
-                <span className="num">·</span><Delta value={sh.cpiOverall.yoy} invert /><span>{t(lang, 'yoy')}</span>
-              </Stat>
-            </div>
-            <div className="mt-3"><Sparkline data={sh.foodTrend} color="#F5A524" height={56} label={t(lang, 'foodCpi')} /></div>
-            <div className="flex items-baseline justify-between text-[11px] text-mist-500"><span>{t(lang, 'foodCpi')} · {t(lang, 'trend52')}</span><span><span className="num text-mist-300">{sh.productsTracked}</span> {t(lang, 'productsTracked')}</span></div>
+        <div className="mt-16 grid gap-10 lg:grid-cols-12">
+          <div className="min-w-0 lg:col-span-8">
+            <h3 className="text-2xl font-semibold text-ink">{tr(C.portTitle)}</h3>
             <div className="mt-4">
-              <div className="label">{t(lang, 'categories')}</div>
-              <ul className="mt-2 space-y-1.5">{sh.categories.slice(0, 6).map((c) => <CategoryRow key={c.key} c={c} lang={lang} />)}</ul>
+              <TrendChart lang={lang} title={tr(C.portTitle)} data={su.portCalls.series.map((p) => ({ date: p.date, calls: p.value as number }))} series={[{ key: 'calls', label: tr(C.portLabel), color: 'series-1' }]}
+                digits={0} yDomain={[0, 'auto']} refY={{ y: su.portCalls.avg2025, label: `${tr(C.avg2025)}: ${su.portCalls.avg2025}` }} event={{ date: s.provenance.warStart, label: tr(C.event) }} />
             </div>
-            <div className="mt-4 grid grid-cols-2 gap-3 rounded-lg border border-line bg-ink-800/60 px-4 py-3">
-              <div>
-                <div className="label">{t(lang, 'sinceWar')}</div>
-                <div className="num mt-1 text-sm text-mist-100">{f(sh.sinceWar.foodPre)} → <span className="font-semibold text-white">{f(sh.sinceWar.foodPost)}</span></div>
-                <div className="text-[11px] text-mist-500">{t(lang, 'foodCpi')} · {t(lang, 'sinceWarSub')}</div>
-              </div>
-              {sh.sinceWar.worst && (
-                <div>
-                  <div className="label">{t(lang, 'worstSinceWar')}</div>
-                  <div className="mt-1 truncate text-sm text-mist-100">{ar ? sh.sinceWar.worst.label_ar : sh.sinceWar.worst.label_en}</div>
-                  <div className="text-[11px] text-mist-500"><Delta value={sh.sinceWar.worst.sinceWar} suffix={` ${t(lang, 'points')}`} invert /> · <Grade g={sh.sinceWar.worst.hormuz} lang={lang} /></div>
-                </div>
-              )}
-            </div>
-            <div className="mt-4">
-              <div className="label">{t(lang, 'basket')}</div>
-              <div className="mt-1 text-sm text-mist-100"><span className="num font-semibold text-white">{sh.basket.directProducts}</span> {t(lang, 'directProducts')} · <span className="num text-white">{f(sh.basket.directWeightPct)}%</span> {t(lang, 'ofWeight')}</div>
-              <div className="text-sm text-mist-300"><span className="num text-mist-100">{sh.basket.rawMaterialRiskProducts}</span> {t(lang, 'rawRisk')} · <span className="num">{f(sh.basket.rawMaterialRiskWeightPct)}%</span></div>
-              <div className="mt-1 truncate text-[11px] text-mist-500">{sh.basket.direct.slice(0, 4).map((p) => `${p.product.split(/[,(]/)[0].trim()} (${p.origin})`).join(' · ')}</div>
-            </div>
-            <div className="mt-3 text-[11px] text-mist-500">{t(lang, 'stockoutsNA')}</div>
-          </Panel>
+            <DataTable lang={lang} head={[tr(C.week), tr(C.portLabel)]} rows={su.portCalls.series.slice(-12).reverse().map((p) => [fmtDate(p.date, lang, { day: 'numeric', month: 'short', year: 'numeric' }), p.value ?? '—'])} />
+          </div>
+          <div className="lg:col-span-4">
+            <h3 className="text-2xl font-semibold text-ink">{tr(C.corridors)}</h3>
+            <p className="mt-1 text-base text-ink-2">{tr(C.corridorsDek)}</p>
+            <ul className="mt-4 divide-y divide-rule border-y border-rule">
+              {su.corridors.map((c) => (
+                <li key={c.id} className="py-3">
+                  <div className="flex items-baseline justify-between gap-3">
+                    <span className="text-lg font-semibold text-ink">{tr(c.name)}</span>
+                    <span className="tnum shrink-0 text-base text-ink">{c.days} {tr(C.days)}</span>
+                  </div>
+                  <div className="mt-0.5 flex items-baseline justify-between gap-3 text-sm text-ink-3">
+                    <span>{tr(c.via)}</span>
+                    <span className="tnum shrink-0">{c.km ? `${c.km.toLocaleString('en-US')} ${ar ? 'كم' : 'km'}` : ''}{c.cost ? (ar ? `، ${costAr(c.cost)}` : `, ${c.cost}`) : ''}</span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
 
-          {/* 02 · Supply & routes */}
-          <Panel lang={lang} index="02" title={t(lang, 'supply')} question={t(lang, 'supplyQ')} status={su.status} sample={su.sample} source={su.source}>
-            <div className="flex items-center justify-between gap-3 rounded-lg border border-line bg-ink-800/60 px-4 py-3">
-              <div>
-                <div className="label">{t(lang, 'hormuz')} · {t(lang, 'deskSet')}</div>
-                <div className={`num mt-0.5 text-2xl font-semibold ${su.hormuz.state === 'open' ? 'text-pulse-green' : su.hormuz.state === 'restricted' ? 'text-pulse-amber' : 'text-pulse-red'}`}>{hz}</div>
+        <div className="mt-16">
+          <h3 className="text-2xl font-semibold text-ink">{tr(C.exposedTitle)}</h3>
+          <p className="mt-2 max-w-4xl text-lg text-ink-2">{tr(C.exposedDek)}</p>
+          <div className="mt-6 border-t-2 border-ink">
+            <div className="hidden grid-cols-12 gap-6 border-b border-rule py-3 text-sm font-medium text-ink-3 lg:grid">
+              <div className="col-span-3">{tr(C.colProduct)}</div><div className="col-span-3">{tr(C.colThrough)}</div><div className="col-span-2">{tr(C.colMain)}</div><div className="col-span-4">{tr(C.colOption)}</div>
+            </div>
+            {su.topAtRisk.map((p) => {
+              const existing = p.options.filter((o) => !o.suggested && o.usdM > 0);
+              const suggested = p.options.filter((o) => o.suggested).slice(0, 2);
+              return (
+                <div key={p.hs6} className="grid grid-cols-1 gap-x-6 gap-y-2 border-b border-rule py-5 lg:grid-cols-12">
+                  <div className="lg:col-span-3">
+                    <div className="text-lg font-semibold leading-snug text-ink">{ar ? p.product_ar ?? p.product : p.product}</div>
+                    <div className="tnum text-sm text-ink-3">HS {p.hs6}</div>
+                  </div>
+                  <div className="lg:col-span-3">
+                    <div className="flex items-baseline gap-2"><span className="figure text-2xl">{usd(p.hormuzUsdM, lang)}</span><span className="text-base text-ink-2"><bdi dir="ltr">{f(p.hormuzPct, 0)}%</bdi> {tr(C.ofImports)}</span></div>
+                    <div className="mt-2 max-w-[16rem]"><Meter pct={p.hormuzPct} label={`${f(p.hormuzPct, 0)}%`} /></div>
+                  </div>
+                  <div className="text-base text-ink lg:col-span-2">{ar ? p.mainSource_ar ?? p.mainSource : p.mainSource}<span className="text-ink-2">{ar ? '، ' : ', '}<bdi dir="ltr">{f(p.mainShare, 0)}%</bdi></span></div>
+                  <div className="text-base leading-snug text-ink lg:col-span-4">
+                    {p.atScale && existing.length ? (
+                      <>
+                        {existing.slice(0, 2).map((o, i) => (
+                          <div key={i}>{ar ? o.country_ar ?? o.country : o.country} <span className="text-ink-2">{tr(C.already)} {usd(o.usdM, lang)}{o.days ? (ar ? `، ${o.port === 'Jeddah' ? 'جدة' : o.port} خلال ${o.days} يوماً` : `, ${o.port ?? 'Jeddah'} in ${o.days} days`) : ''}</span></div>
+                        ))}
+                        {suggested.length > 0 && <div className="mt-1 text-sm text-ink-3">{tr(C.suggested)}: {suggested.map((o) => `${ar ? o.country_ar ?? o.country : o.country}${o.days ? ` (${o.days} ${tr(C.days)})` : ''}`).join(ar ? '، ' : ', ')}</div>}
+                      </>
+                    ) : <span className="text-ink-2">{tr(C.noScale)}</span>}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* ---------------------------------------------------------------- prices and shelves */}
+      <section className="wrap mt-24" id="prices">
+        <SectionHead lang={lang} pills={[{ status: sh.status, name: PILLAR_NAME.shelves }]} title={st.sections.shelves.title} dek={st.sections.shelves.dek} />
+        <div className="mt-10 grid gap-12 lg:grid-cols-12">
+          <div className="min-w-0 lg:col-span-7">
+            <h3 className="text-2xl font-semibold text-ink">{tr(C.foodChart)}</h3>
+            <div className="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-base text-ink-2">
+              <span className="inline-flex items-center gap-2"><span className="inline-block h-[3px] w-6 rounded bg-s1" />{tr(C.food)}</span>
+              <span className="inline-flex items-center gap-2"><span className="inline-block h-[3px] w-6 rounded bg-ctx" />{tr(C.cpi)}</span>
+            </div>
+            <div className="mt-2">
+              <TrendChart lang={lang} title={tr(C.foodChart)} data={sh.series.map((p) => ({ date: p.date, food: p.food, cpi: p.cpi }))}
+                series={[{ key: 'cpi', label: tr(C.cpi), color: 'context', endLabel: false }, { key: 'food', label: tr(C.food), color: 'series-1', width: 2.5 }]}
+                refY={{ y: 100, label: '' }} event={{ date: s.provenance.warStart, label: tr(C.event) }} />
+            </div>
+            <DataTable lang={lang} head={[tr(C.week), tr(C.food), tr(C.cpi)]} rows={sh.series.slice(-12).reverse().map((p) => [fmtDate(p.date, lang, { day: 'numeric', month: 'short', year: 'numeric' }), f(p.food), f(p.cpi)])} />
+          </div>
+          <div className="min-w-0 lg:col-span-5">
+            <h3 className="text-2xl font-semibold text-ink">{tr(C.catTitle)}</h3>
+            <div className="mt-4 border-t-2 border-ink">
+              <div className="grid grid-cols-12 gap-3 border-b border-rule py-2 text-sm font-medium text-ink-3">
+                <div className="col-span-5">{tr(C.colCat)}</div><div className="col-span-2 text-end">{tr(C.colIdx)}</div><div className="col-span-5">{tr(C.colWow)}</div>
               </div>
-              <div className="max-w-[55%] text-right text-[11px] leading-snug text-mist-500 rtl:text-left">{ar ? su.hormuz.note_ar : su.hormuz.note_en}</div>
+              {sh.categories.map((c) => (
+                <div key={c.key} className="grid grid-cols-12 items-center gap-3 border-b border-rule py-2.5">
+                  <div className="col-span-5">
+                    <div className="text-base leading-tight text-ink">{ar ? c.label_ar : c.label_en}</div>
+                    <div className="mt-1"><Grade g={c.hormuz} lang={lang} /></div>
+                  </div>
+                  <div className="tnum col-span-2 text-end text-base text-ink-2">{f(c.value)}</div>
+                  <div className="col-span-5 flex items-center gap-3">
+                    <div className="flex-1"><DivBar value={c.wow} max={catMax} label={`${signed(c.wow)}%`} /></div>
+                    <span className={`tnum w-14 shrink-0 text-end text-base font-semibold ${c.wow > 0 ? 'delta-bad' : c.wow < 0 ? 'delta-good' : 'text-ink'}`}><bdi dir="ltr">{signed(c.wow)}%</bdi></span>
+                  </div>
+                </div>
+              ))}
+              <p className="mt-2 text-sm text-ink-3">{ar ? 'الأعمدة الثلاثة: درجة اعتماد الفئة على هرمز وفق المنصة.' : 'The three bars grade how much each category depends on Hormuz, as rated by the platform.'}</p>
             </div>
-            <div className="mt-4 grid grid-cols-3 gap-3">
-              <Stat label={t(lang, 'importsViaHormuz')} value={su.exposure.importsViaHormuzPct} suffix="%"><span>${f(su.exposure.importsViaHormuzUsdB, 0)}B / ${f(su.exposure.importsTotalUsdB, 0)}B</span></Stat>
-              <Stat label={t(lang, 'foodViaHormuz')} value={su.exposure.foodViaHormuzPct} suffix="%"><span>${f(su.exposure.foodViaHormuzUsdB, 1)}B {t(lang, 'atRisk')}</span></Stat>
-              <Stat label={t(lang, 'critical')} value={su.exposure.criticalProducts} digits={0}><span>{t(lang, 'ofProducts')} {su.exposure.productsCovered.toLocaleString('en-US')}</span></Stat>
+          </div>
+        </div>
+        <div className="mt-12 grid gap-8 border-t border-rule pt-8 md:grid-cols-3">
+          <Figure value={`${sh.basket.directProducts}`} label={ar ? `منتجاً من أصل ${sh.productsTracked} تُشحن مباشرة عبر هرمز` : `of ${sh.productsTracked} tracked products ship direct through Hormuz`} note={ar ? `${f(sh.basket.directWeightPct)}% من وزن السلة` : `${f(sh.basket.directWeightPct)}% of basket weight`} />
+          <Figure value={`${sh.basket.rawMaterialRiskProducts}`} label={ar ? 'منتجاً يعتمد على مواد خام مستوردة معرّضة' : 'depend on imported raw materials at risk'} note={ar ? `${f(sh.basket.rawMaterialRiskWeightPct)}% من وزن السلة` : `${f(sh.basket.rawMaterialRiskWeightPct)}% of basket weight`} />
+          <div className="text-base text-ink-2">
+            <div className="eyeline">{tr(C.basket)}</div>
+            <p className="mt-2">{sh.basket.direct.slice(0, 4).map((p) => `${p.product.split(/[,(]/)[0].trim()} (${p.origin})`).join(ar ? '؛ ' : '; ')}.</p>
+            <p className="mt-3 text-sm text-ink-3">{tr(C.stockouts)}</p>
+          </div>
+        </div>
+      </section>
+
+      {/* ---------------------------------------------------------------- growth, markets and confidence */}
+      <section className="wrap mt-24" id="growth">
+        <SectionHead lang={lang} pills={[{ status: ec.status, name: PILLAR_NAME.economy }, { status: co.status, name: PILLAR_NAME.confidence }]} title={st.sections.growth.title} dek={st.sections.growth.dek} />
+        <div className="mt-10 grid gap-12 lg:grid-cols-12">
+          <div className="min-w-0 lg:col-span-7">
+            <h3 className="text-2xl font-semibold text-ink">{tr(C.gdpChart)}</h3>
+            <div className="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-base text-ink-2">
+              <span className="inline-flex items-center gap-2"><span className="inline-block h-[3px] w-6 rounded bg-s1" />{tr(C.total)}</span>
+              <span className="inline-flex items-center gap-2"><span className="inline-block h-[3px] w-6 rounded bg-s2" />{tr(C.nonOil)}</span>
             </div>
-            <div className="mt-4 grid grid-cols-3 gap-3">
-              <Stat label={t(lang, 'portCalls')} value={su.portCalls.weekly} digits={0} delta={su.portCalls.wow} deltaLabel={t(lang, 'wow')} />
-              <Stat label={t(lang, 'vs2025')} value={su.portCalls.vs2025} digits={0} suffix="%"><span>{su.portCalls.avg2025}/wk 2025</span></Stat>
-              <div className="min-w-0"><div className="label leading-tight">{t(lang, 'portCallsTrend')}</div><Sparkline data={su.portCalls.trend} color="#4C8DFF" height={44} digits={0} label={t(lang, 'portCalls')} /></div>
+            <div className="mt-2">
+              <TrendChart lang={lang} title={tr(C.gdpChart)} data={ec.gdp.series} digits={2} prefix="$"
+                series={[{ key: 'total', label: tr(C.total), color: 'series-1' }, { key: 'nonOil', label: tr(C.nonOil), color: 'series-2' }]}
+                event={{ date: s.provenance.warStart, label: tr(C.event) }} />
             </div>
-            <div className="mt-4">
-              <div className="label">{t(lang, 'topAtRisk')}</div>
-              <ul className="mt-2 space-y-2">
-                {su.topAtRisk.slice(0, 5).map((p) => (
-                  <li key={p.hs6} className="text-xs">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="truncate text-mist-100">{ar ? p.product_ar ?? p.product : p.product} <span className="num text-mist-500">HS {p.hs6}</span></span>
-                      <span className={`num shrink-0 font-semibold ${p.hormuzPct >= 70 ? 'text-pulse-red' : p.hormuzPct >= 40 ? 'text-pulse-amber' : 'text-pulse-green'}`}>{f(p.hormuzPct, 0)}% · ${p.hormuzUsdM >= 1000 ? `${f(p.hormuzUsdM / 1000, 1)}B` : `${p.hormuzUsdM}M`}</span>
+            <DataTable lang={lang} head={[tr(C.week), tr(C.total), tr(C.nonOil)]} rows={ec.gdp.series.slice(-12).reverse().map((p) => [fmtDate(p.date, lang, { day: 'numeric', month: 'short', year: 'numeric' }), `$${f(p.total, 2)}T`, `$${f(p.nonOil, 2)}T`])} />
+          </div>
+          <div className="grid grid-cols-2 content-start gap-x-6 gap-y-7 lg:col-span-5">
+            <Kpi label={tr(C.spending)} value={f(ec.spending.value)} delta={ec.spending.yoy} good="up" period={tr(C.yoy)} trend={ec.spending.trend} />
+            <Kpi label={tr(C.employment)} value={f(ec.employment.value)} delta={ec.employment.wow} good="up" period={tr(C.wow)} trend={ec.employment.trend} />
+            <Kpi label={tr(C.pmi)} value={f(ec.pmi)} note={ec.pmi >= 50 ? tr(C.expansion) : tr(C.contraction)} trend={ec.pmiTrend} />
+            <Kpi label={tr(C.invest)} value={f(co.investment.value)} delta={co.investment.wow} good="up" period={tr(C.wow)} />
+            <Kpi label={tr(C.brent)} value={`$${f(co.brent.value)}`} delta={co.brent.vsPreWar} good="none" period={tr(C.preWar)} trend={co.brentTrend} />
+            <Kpi label={tr(C.tasi)} value={co.tasi.value.toLocaleString('en-US')} delta={co.tasi.m4} good="up" period={tr(C.m4)} trend={co.tasiTrend} />
+            <Kpi label={tr(C.sama)} value={`${f(co.samaRate, 2)}%`} />
+            <Kpi label={`${tr(C.sentiment)}${co.sentiment.live ? `, ${tr(C.live)}` : ''}`} value={signed(co.sentiment.score, 2)} note={ar ? BAND_AR[co.sentiment.band] ?? co.sentiment.band : co.sentiment.band} trend={co.sentiment.trend.map((p) => ({ date: p.date, value: p.score }))} zero />
+          </div>
+        </div>
+
+        <div className="mt-16 grid gap-12 lg:grid-cols-12">
+          <div className="min-w-0 lg:col-span-7">
+            <h3 className="text-2xl font-semibold text-ink">{tr(C.warTitle)}</h3>
+            <p className="mt-1 text-base text-ink-2">{tr(C.warDek)}</p>
+            <div className="mt-4 border-t-2 border-ink">
+              <div className="grid grid-cols-12 gap-3 border-b border-rule py-2 text-sm font-medium text-ink-3">
+                <div className="col-span-4">{tr(C.colMeasure)}</div><div className="col-span-2 text-end">{tr(C.colBefore)}</div><div className="col-span-2 text-end">{tr(C.colSince)}</div><div className="col-span-4">{tr(C.colChange)}</div>
+              </div>
+              {warRows.map((r) => {
+                const ch = r.pre ? ((r.post - r.pre) / Math.abs(r.pre)) * 100 : 0;
+                return (
+                  <div key={r.key} className="grid grid-cols-12 items-center gap-3 border-b border-rule py-2.5">
+                    <div className="col-span-4 text-base text-ink">{tr(r.label)}</div>
+                    <div className="tnum col-span-2 text-end text-base text-ink-2">{f(r.pre, r.digits)}</div>
+                    <div className="tnum col-span-2 text-end text-base font-semibold text-ink">{f(r.post, r.digits)}</div>
+                    <div className="col-span-4 flex items-center gap-3">
+                      <div className="flex-1"><DivBar value={ch} max={warMax} label={`${signed(ch, 0)}%`} /></div>
+                      <span className={`tnum w-12 shrink-0 text-end text-base font-semibold ${r.good === 'none' || Math.round(ch) === 0 ? 'text-ink' : (r.good === 'up') === ch > 0 ? 'delta-good' : 'delta-bad'}`}><bdi dir="ltr">{signed(ch, 0)}%</bdi></span>
                     </div>
-                    <div className="mt-1 flex items-center gap-2">
-                      <div className="h-1 w-20 shrink-0 rounded bg-ink-700"><div className={`h-1 rounded ${p.hormuzPct >= 70 ? 'bg-pulse-red' : p.hormuzPct >= 40 ? 'bg-pulse-amber' : 'bg-pulse-green'}`} style={{ width: `${p.hormuzPct}%` }} /></div>
-                      <span className="truncate text-mist-500">{ar ? p.mainSource_ar ?? p.mainSource : p.mainSource} → <span className="text-mist-300">{ar ? p.altSupplier_ar ?? p.altSupplier : p.altSupplier}</span>{p.altDays ? ` · ${p.altDays} ${ar ? 'يوم' : 'd'}` : ''}{p.altCost ? ` · ${p.altCost}` : ''}</span>
-                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+          <div className="lg:col-span-5">
+            <h3 className="text-2xl font-semibold text-ink">{tr(C.headlines)}</h3>
+            <p className="mt-1 text-base text-ink-2">{fmtDate(co.sentiment.date, lang)}{co.sentiment.headlineCount ? (ar ? `، ${co.sentiment.headlineCount} عنواناً` : `, ${co.sentiment.headlineCount} headlines`) : ''}</p>
+            {co.sentiment.headlines.length > 0 ? (
+              <ul className="mt-4 divide-y divide-rule border-y border-rule">
+                {co.sentiment.headlines.slice(0, 6).map((h, i) => (
+                  <li key={i} className="flex gap-3 py-3 text-base leading-snug" dir="auto">
+                    <span className={`mt-[0.45rem] h-2.5 w-2.5 shrink-0 rounded-full ${h.sentiment === 'negative' ? 'bg-st-critical' : h.sentiment === 'positive' ? 'bg-st-normal' : 'bg-ink-3'}`} aria-label={h.sentiment ?? ''} />
+                    <span className="text-ink">{h.headline}{h.source ? <span className="text-ink-3"> ({h.source})</span> : null}</span>
                   </li>
                 ))}
               </ul>
-            </div>
-            <div className="mt-4">
-              <div className="label">{t(lang, 'corridors')}</div>
-              <ul className="mt-2 space-y-1 text-xs">
-                {su.corridors.map((c, i) => (
-                  <li key={i} className="flex justify-between gap-2"><span className="min-w-0"><span className="text-mist-100">{ar ? c.name_ar : c.name_en}</span> <span className="text-mist-500">— {ar ? c.via_ar : c.via_en}</span></span>{(c.days || c.cost) && <span className="num shrink-0 text-mist-500">{[c.days ? `${c.days} ${ar ? 'أيام' : 'days'}` : null, c.cost].filter(Boolean).join(' · ')}</span>}</li>
-                ))}
-              </ul>
-            </div>
-          </Panel>
-
-          {/* 03 · Confidence */}
-          <Panel lang={lang} index="03" title={t(lang, 'confidence')} question={t(lang, 'confidenceQ')} status={co.status} sample={co.sample} source={co.source} fresh={co.sentiment.live ? 'mixed' : 'daily'}>
-            <div className="grid grid-cols-2 gap-4">
-              <Stat big label={t(lang, 'brent')} value={co.brent.value} prefix="$" delta={co.brent.wow} deltaLabel={t(lang, 'wow')}>
-                <span className="num">·</span><Delta value={co.brent.vsPreWar} digits={0} /><span>{ar ? 'عن ما قبل الحرب' : 'vs pre-war'}</span>
-              </Stat>
-              <Stat big label={t(lang, 'tasi')} value={co.tasi.value} digits={0} delta={co.tasi.wow} deltaLabel={t(lang, 'wow')}>
-                <span className="num">·</span><Delta value={co.tasi.m4} /><span>{t(lang, 'm4')}</span>
-              </Stat>
-            </div>
-            <div className="mt-2 grid grid-cols-2 gap-4">
-              <Sparkline data={co.brentTrend} color="#F5A524" height={44} prefix="$" label={t(lang, 'brent')} />
-              <Sparkline data={co.tasiTrend} color="#4C8DFF" height={44} digits={0} label={t(lang, 'tasi')} />
-            </div>
-            <div className="mt-4 grid grid-cols-3 gap-3">
-              <Stat label={t(lang, 'samaRate')} value={co.samaRate} digits={2} suffix="%" />
-              <Stat label={t(lang, 'pmi')} value={co.pmi}><span>{co.pmi >= 50 ? (ar ? 'توسّع' : 'expansion') : ar ? 'انكماش' : 'contraction'}</span></Stat>
-              <Stat label={t(lang, 'investment')} value={co.investment.value} delta={co.investment.wow} deltaLabel={t(lang, 'wow')} />
-            </div>
-            <div className="mt-4 rounded-lg border border-line bg-ink-800/60 px-4 py-3">
-              <div className="flex items-baseline justify-between">
-                <div>
-                  <div className="label">{t(lang, 'sentiment')} {co.sentiment.live && <span className="chip chip-normal ml-2 align-middle">{t(lang, 'live')}</span>}</div>
-                  <div className="text-[11px] text-mist-500">{t(lang, 'sentimentSub')} · {co.sentiment.date}{co.sentiment.headlineCount ? ` · ${co.sentiment.headlineCount} ${ar ? 'عنواناً' : 'headlines'}` : ''}</div>
-                </div>
-                <div className={`num text-2xl font-semibold ${sentColor}`}>{co.sentiment.score > 0 ? '+' : ''}{co.sentiment.score.toFixed(2)} <span className="text-xs font-normal text-mist-500">{ar ? BAND_AR[co.sentiment.band] ?? co.sentiment.band : co.sentiment.band}</span></div>
-              </div>
-              <div className="mt-2"><Sparkline data={co.sentiment.trend.map((p) => ({ date: p.date, value: p.score }))} domain={[-1, 1]} zero digits={2} color={co.sentiment.score >= 0 ? '#1FB58C' : '#E5484D'} label={t(lang, 'sentiment')} /></div>
-              {co.sentiment.headlines.length > 0 && (
-                <ul className="mt-2 space-y-1 text-xs text-mist-300">
-                  {co.sentiment.headlines.slice(0, 6).map((h, i) => (
-                    <li key={i} className="flex gap-2"><span className={h.sentiment === 'negative' ? 'text-pulse-red' : h.sentiment === 'positive' ? 'text-pulse-green' : 'text-mist-500'}>●</span><span className="truncate">{h.headline}</span></li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          </Panel>
+            ) : <p className="mt-4 text-base text-ink-3">{ar ? 'تظهر العناوين عند وصول التغذية المباشرة.' : 'Headlines appear when the live feed is connected.'}</p>}
+          </div>
         </div>
+      </section>
 
-        {/* 04 · The economy */}
-        <div className="mt-4">
-          <Panel lang={lang} index="04" title={t(lang, 'economy')} question={t(lang, 'economyQ')} status={ec.status} sample={ec.sample} source={ec.source}>
-            <div className="grid gap-5 lg:grid-cols-3">
-              <div className="grid grid-cols-2 gap-4 lg:col-span-2 md:grid-cols-4">
-                <div>
-                  <Stat big label={t(lang, 'gdp')} value={ec.gdp.totalUsdT} digits={2} prefix="$" suffix="T" delta={ec.gdp.momentum4w} deltaLabel={t(lang, 'momentum')} />
-                  <div className="mt-2"><Sparkline data={ec.gdp.trend} color="#1FB58C" height={48} digits={2} prefix="$" label={t(lang, 'gdp')} /></div>
-                  <div className="text-[11px] text-mist-500">{t(lang, 'oilGdp')} ${f(ec.gdp.oilUsdT, 2)}T · {f(ec.gdp.oilShare, 0)}% {t(lang, 'oilShare')}</div>
-                </div>
-                <div>
-                  <Stat big label={t(lang, 'nonOilGdp')} value={ec.gdp.nonOilUsdT} digits={2} prefix="$" suffix="T"><span>{f(100 - ec.gdp.oilShare, 0)}% {ar ? 'من الناتج' : 'of GDP'}</span></Stat>
-                  <div className="mt-2"><Sparkline data={ec.gdp.nonOilTrend} color="#4C8DFF" height={48} digits={2} prefix="$" label={t(lang, 'nonOilGdp')} /></div>
-                  <div className="text-[11px] text-mist-500">{t(lang, 'trend52')}</div>
-                </div>
-                <div>
-                  <Stat big label={t(lang, 'spending')} value={ec.spending.value} delta={ec.spending.wow} deltaLabel={t(lang, 'wow')}>
-                    <span className="num">·</span><Delta value={ec.spending.yoy} /><span>{t(lang, 'yoy')}</span>
-                  </Stat>
-                  <div className="mt-2"><Sparkline data={ec.spending.trend} color="#F5A524" height={48} label={t(lang, 'spending')} /></div>
-                  <div className="text-[11px] text-mist-500">{t(lang, 'spendingSub')} · {t(lang, 'trend52')}</div>
-                </div>
-                <div className="space-y-3">
-                  <Stat label={t(lang, 'employment')} value={ec.employment.value} delta={ec.employment.wow} deltaLabel={t(lang, 'wow')} />
-                  <Stat label={t(lang, 'investment')} value={ec.investment.value} delta={ec.investment.wow} deltaLabel={t(lang, 'wow')} />
-                  <Stat label={t(lang, 'pmi')} value={ec.pmi}><span>{ec.pmi >= 50 ? (ar ? 'فوق 50 = توسّع' : 'above 50 = expansion') : ar ? 'تحت 50 = انكماش' : 'below 50 = contraction'}</span></Stat>
-                </div>
-              </div>
-              <div className="rounded-lg border border-line bg-ink-800/60 px-4 py-3">
-                <div className="flex items-baseline justify-between"><div className="label">{t(lang, 'sinceWar')}</div><div className="text-[11px] text-mist-500">{t(lang, 'sinceWarSub')}</div></div>
-                <ul className="mt-2 divide-y divide-line">
-                  {ec.sinceWar.rows.map((r) => {
-                    const ch = r.pre ? ((r.post - r.pre) / r.pre) * 100 : 0;
-                    return (
-                      <li key={r.key} className="flex items-center justify-between gap-2 py-1.5 text-xs">
-                        <span className="truncate text-mist-300">{ar ? r.label_ar : r.label_en}</span>
-                        <span className="num shrink-0 text-mist-100">{f(r.pre, r.digits)} → <span className="font-semibold text-white">{f(r.post, r.digits)}</span> <Delta value={Math.round(ch * 10) / 10} digits={0} invert={r.key === 'oil'} /></span>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </div>
-            </div>
-            <div className="mt-4 border-t border-line pt-3">
-              <div className="flex items-baseline justify-between"><div className="label">{t(lang, 'annual')}</div><div className="text-[11px] text-mist-500">{t(lang, 'annualSub')}</div></div>
-              <div dir="ltr" className="mt-2 flex gap-2 overflow-x-auto pb-1">
-                {ec.annual.map((y) => (
-                  <div key={y.year} className="min-w-[7.5rem] shrink-0 rounded-md border border-line bg-ink-800/40 px-3 py-2">
-                    <div className="num text-[11px] text-mist-500">{y.year}{y.weeks < 52 ? ` · ${y.weeks}w` : ''}</div>
-                    <div className="num text-base font-semibold text-white">{y.gdpUsdT !== null ? `$${f(y.gdpUsdT, 2)}T` : '—'}</div>
-                    <div className="num text-[11px] text-mist-500">${y.brent !== null ? f(y.brent, 0) : '—'} · {y.portCalls ?? '—'}/wk</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </Panel>
+      {/* ---------------------------------------------------------------- method */}
+      <section className="wrap mt-24 pb-6">
+        <div className="border-t border-rule pt-8">
+          <h2 className="text-2xl font-semibold text-ink">{tr(C.method)}</h2>
+          <ul className="mt-4 grid max-w-6xl gap-x-10 gap-y-2 text-base text-ink-2 md:grid-cols-2">
+            <li>{freshness}</li>
+            <li>{ar ? `تعرّض الواردات من بيانات كومتريد الأممية لعام ${ex.comtradeYear} عبر المنصة السعودية (${ex.productsCovered.toLocaleString('en-US')} منتجاً).` : `Import exposure from UN Comtrade ${ex.comtradeYear} via the KSA platform (${ex.productsCovered.toLocaleString('en-US')} products).`}</li>
+            <li>{ar ? 'الناتج المحلي تقدير آني مركّب من المنصة، وليس الأرقام الفصلية الرسمية للهيئة العامة للإحصاء.' : 'GDP is the platform’s composite nowcast, not GASTAT’s official quarterly figure.'}</li>
+            <li>{ar ? 'حالة مضيق هرمز مُدخل يحدّده المكتب كل صباح؛ بقية الحالات تُحسب من القواعد المنشورة.' : 'The Hormuz status is a desk input set each morning; every other status is computed from published rules.'}</li>
+          </ul>
+          <Link href="/modules" className="link mt-5 inline-block text-lg">{tr(C.methodLink)}</Link>
         </div>
-
-        <div className="mt-4 grid gap-4 lg:grid-cols-3">
-          <div className="lg:col-span-2"><AlertList alerts={s.alerts} lang={lang} /></div>
-          <section className="card p-5">
-            <div className="label">{t(lang, 'modules')}</div>
-            <p className="mt-2 text-sm text-mist-300">{t(lang, 'modulesSub')}</p>
-            <Link href="/modules" className="mt-3 inline-block text-sm font-semibold text-pulse-blue hover:underline">{t(lang, 'modules')} →</Link>
-            <p className="mt-4 text-[11px] leading-snug text-mist-500">{t(lang, 'provenance')} {ar ? 'آخر تحديث للبيانات' : 'Data refreshed'} {fmtDate(s.provenance.fetchedAt.slice(0, 10), lang)}.</p>
-          </section>
-        </div>
-      </div>
+      </section>
     </main>
   );
 }

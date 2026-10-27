@@ -29,3 +29,10 @@ export async function currentLang(): Promise<'en' | 'ar'> {
   const c = await cookies();
   return c.get(LANG_COOKIE)?.value === 'ar' ? 'ar' : 'en';
 }
+
+export const THEME_COOKIE = 'rasd_theme';
+/** 'light' | 'dark' when the viewer chose one; null follows the device setting. */
+export async function currentTheme(): Promise<'light' | 'dark' | null> {
+  const v = (await cookies()).get(THEME_COOKIE)?.value;
+  return v === 'light' || v === 'dark' ? v : null;
+}

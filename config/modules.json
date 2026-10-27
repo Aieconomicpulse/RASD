@@ -1,5 +1,5 @@
 {
-  "_comment": "The AI Economic Pulse platforms for the Kingdom that Rasd sits on top of. Each is a Vercel project in the economicpulse team. 'feeds' lists what the situation picture takes from it today (refreshed daily by scripts/refresh-ksa-data.mjs, or live at request time) and what would still add to the picture.",
+  "_comment": "The AI Economic Pulse platforms for the Kingdom that Rasd draws on. Each is a Vercel project in the economicpulse team. 'now' lists what the picture takes from it today (refreshed daily by scripts/refresh-ksa-data.mjs, or live at request time); 'next' lists what would add to the picture.",
   "modules": [
     {
       "id": "foodwatch",
@@ -7,18 +7,17 @@
       "name_ar": "مرصد الغذاء — هرمز",
       "project": "ksa-cpi-intelligence-v2-fh4f",
       "url": "https://ksa-cpi-intelligence-v2-fh4f.vercel.app/",
-      "panel": "shelves",
-      "summary": "154 food products tracked daily across Saudi retail sources; weekly non-core CPI by category; source-country → route → category flows; Hormuz exposure per product with Hormuz-free alternatives; executive brief; AI CPI advisor.",
-      "feeds": {
-        "live": [
-          "weekly non-core CPI by category (base 100), food index and CPI overall → panel 01",
-          "tracked retail basket (171 products: weight, origin, raw material, Hormuz flag) → panel 01 basket exposure",
-          "UN Comtrade 2024 Hormuz exposure per HS6 (critical + top-200 lists, alternatives, corridors) → panel 02"
-        ],
-        "to_wire": [
-          "out-of-stock detection in the retail price scraper (available:false per SKU × retailer) → stock-outs"
-        ]
-      }
+      "pillar": "shelves",
+      "summary": "171 food products tracked daily across Saudi retailers; weekly non-core CPI by category; source-country, route and category flows; Hormuz exposure per product with Hormuz-free alternatives.",
+      "summary_ar": "171 منتجاً غذائياً تُتابَع يومياً لدى تجّار التجزئة في المملكة؛ مؤشر أسعار غير أساسي أسبوعي حسب الفئة؛ تدفقات من بلد المنشأ عبر المسار إلى الفئة؛ وتعرّض كل منتج لهرمز مع بدائل لا تمر به.",
+      "now": [
+        { "en": "Weekly food index, CPI and eleven categories", "ar": "مؤشر الغذاء الأسبوعي والمؤشر العام وإحدى عشرة فئة" },
+        { "en": "The tracked basket: weight, origin, raw material, Hormuz flag", "ar": "السلة المتابَعة: الوزن والمنشأ والمادة الخام ومؤشر هرمز" },
+        { "en": "UN Comtrade 2024 exposure per HS6 line, with alternatives and corridors", "ar": "تعرّض كل بند HS6 وفق كومتريد 2024، مع البدائل والممرات" }
+      ],
+      "next": [
+        { "en": "Stock-outs: an availability flag per product and retailer in the price scraper", "ar": "نفاد المخزون: مؤشر توافر لكل منتج وتاجر في جامع الأسعار" }
+      ]
     },
     {
       "id": "macro",
@@ -26,17 +25,16 @@
       "name_ar": "نبض الاقتصاد الكلي",
       "project": "ksa-cpi-intelligence-v2-fh4f",
       "url": "https://ksa-cpi-intelligence-v2-fh4f.vercel.app/",
-      "panel": "confidence",
-      "summary": "Weekly GDP tracker (total, oil, non-oil), twelve indicators (Brent, port calls, TASI, SAMA rate, PMI, employment, spending, investment confidence), daily press sentiment, AI macro advisor.",
-      "feeds": {
-        "live": [
-          "weekly GDP nowcast (total, oil, non-oil), Brent, TASI, SAMA rate, PMI, port calls, spending, employment, investment → panels 02–04",
-          "/api/news-sentiment → daily pooled sentiment score, band, headlines (live at request time) → panel 03"
-        ],
-        "to_wire": [
-          "/api/oil-price → daily Brent (currently failing: model ID claude-sonnet-4-20250514 no longer exists — update the model string)"
-        ]
-      }
+      "pillar": "economy",
+      "summary": "Weekly GDP nowcast (total, oil, non-oil) since 2019 and twelve indicators: Brent, port calls, TASI, SAMA rate, PMI, employment, spending, investment confidence; daily press sentiment.",
+      "summary_ar": "تقدير آني أسبوعي للناتج المحلي (الإجمالي والنفطي وغير النفطي) منذ 2019 واثنا عشر مؤشراً: برنت، رسو السفن، تاسي، سعر ساما، مؤشر مديري المشتريات، التوظيف، الإنفاق، ثقة الاستثمار؛ ومعنويات الصحافة اليومية.",
+      "now": [
+        { "en": "GDP nowcast, Brent, TASI, SAMA rate, PMI, port calls, spending, employment, investment", "ar": "تقدير الناتج، برنت، تاسي، سعر ساما، مديرو المشتريات، رسو السفن، الإنفاق، التوظيف، الاستثمار" },
+        { "en": "Press sentiment, live at request time", "ar": "معنويات الصحافة، مباشرة عند الطلب" }
+      ],
+      "next": [
+        { "en": "Daily Brent once the platform's oil-price service is fixed (its model ID no longer exists)", "ar": "سعر برنت اليومي بعد إصلاح خدمة سعر النفط في المنصة (معرّف النموذج لم يعد موجوداً)" }
+      ]
     },
     {
       "id": "shipping",
@@ -44,14 +42,13 @@
       "name_ar": "استخبارات الشحن الخليجي",
       "project": "gcc-optimal-shipping-routes",
       "url": "https://gcc-optimal-shipping-routes.vercel.app/",
-      "panel": "supply",
-      "summary": "GCC import supply chains and Hormuz chokepoint exposure across the six states; optimal and alternative routes; rerouting cost and transit comparisons.",
-      "feeds": {
-        "live": [],
-        "to_wire": [
-          "/api/ksa-routes → inbound vessels bound for Saudi ports by type and ETA; days of supply at Gulf and Red Sea ports"
-        ]
-      }
+      "pillar": "supply",
+      "summary": "Import supply chains and Hormuz chokepoint exposure; optimal and alternative routes; rerouting cost and transit comparisons.",
+      "summary_ar": "سلاسل إمداد الواردات والتعرّض لمضيق هرمز؛ المسارات المثلى والبديلة؛ ومقارنة تكلفة إعادة التوجيه ومدد العبور.",
+      "now": [],
+      "next": [
+        { "en": "Vessels bound for Saudi ports by type and arrival; days of supply at the Gulf and Red Sea ports", "ar": "السفن المتجهة إلى الموانئ السعودية حسب النوع وموعد الوصول؛ وأيام الإمداد في موانئ الخليج والبحر الأحمر" }
+      ]
     },
     {
       "id": "stocks",
@@ -59,29 +56,27 @@
       "name_ar": "تحليلات سوق الأسهم السعودية",
       "project": "argaam-intelligence-portal-main / stocks-intelligence-portal",
       "url": "https://argaam-intelligence-portal-main.vercel.app/",
-      "panel": "confidence",
-      "summary": "Research engine for the Saudi Exchange: company financials, peer comparisons, sector dynamics, screens, Arabic and English.",
-      "feeds": {
-        "live": [],
-        "to_wire": [
-          "/api/market-latest → TASI daily change, sector moves, breadth (the weekly TASI already comes from the macro series)"
-        ]
-      }
+      "pillar": "confidence",
+      "summary": "Research engine for the Saudi Exchange: company financials, peer comparisons, sector dynamics and screens, in Arabic and English.",
+      "summary_ar": "محرك بحث لسوق الأسهم السعودية: القوائم المالية للشركات، ومقارنة النظراء، وديناميكيات القطاعات، والفرز، بالعربية والإنجليزية.",
+      "now": [],
+      "next": [
+        { "en": "Daily TASI moves, sector moves and breadth (the weekly TASI already comes from the macro series)", "ar": "تحركات تاسي اليومية والقطاعات واتساع السوق (تاسي الأسبوعي متوفر من السلسلة الكلية)" }
+      ]
     },
     {
       "id": "jamarik",
-      "name": "Jamarik — Saudi customs mirror",
+      "name": "Jamarik, Saudi customs mirror",
       "name_ar": "جمارك — المرآة الجمركية السعودية",
       "project": "multiple-country-jamarik",
       "url": "https://multiple-country-jamarik.vercel.app/",
-      "panel": "supply",
-      "summary": "Trade-mirror forensics for the Kingdom: what every exporting partner reports shipping to Saudi Arabia against what the Kingdom registers, product by product — the origin-adjusted dependence and supplier-concentration view behind the supply panel. Monthly cadence.",
-      "feeds": {
-        "live": [],
-        "to_wire": [
-          "/api/ksa-dependence → import dependence and origin-adjusted supplier concentration for the forty food headings"
-        ]
-      }
+      "pillar": "supply",
+      "summary": "Trade-mirror forensics for the Kingdom: what every exporting partner reports shipping to Saudi Arabia against what the Kingdom registers, product by product. Monthly.",
+      "summary_ar": "تحليل المرآة التجارية للمملكة: ما يعلنه كل شريك مصدِّر عن شحناته إلى المملكة مقابل ما تسجّله المملكة، منتجاً بمنتج. شهرياً.",
+      "now": [],
+      "next": [
+        { "en": "Import dependence and origin-adjusted supplier concentration for the forty food headings", "ar": "الاعتماد على الاستيراد وتركّز الموردين المعدّل حسب المنشأ لأربعين بنداً غذائياً" }
+      ]
     }
   ]
 }

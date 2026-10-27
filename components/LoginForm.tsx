@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 
-export default function LoginForm({ labels }: { labels: { password: string; signIn: string } }) {
+export default function LoginForm({ labels }: { labels: { password: string; signIn: string; wrong: string } }) {
   const [pw, setPw] = useState(''); const [err, setErr] = useState(false); const [busy, setBusy] = useState(false);
   const params = useSearchParams();
   async function submit(e: React.FormEvent) {
@@ -12,12 +12,13 @@ export default function LoginForm({ labels }: { labels: { password: string; sign
     if (r.ok) { window.location.assign(params.get('next') || '/'); } else setErr(true);
   }
   return (
-    <form onSubmit={submit} className="card mt-6 space-y-3 p-5">
-      <label className="label block" htmlFor="pw">{labels.password}</label>
-      <input id="pw" type="password" value={pw} onChange={(e) => setPw(e.target.value)} autoFocus
-        className="w-full rounded-md border border-line bg-ink-950 px-3 py-2 font-mono text-white outline-none focus:border-pulse-blue" />
-      {err && <div className="text-xs text-pulse-red">✕</div>}
-      <button type="submit" disabled={busy || !pw} className="w-full rounded-md bg-white py-2 text-sm font-semibold text-ink-950 disabled:opacity-50">{labels.signIn}</button>
+    <form onSubmit={submit} className="mt-8 space-y-3">
+      <label className="block text-base font-medium text-ink" htmlFor="pw">{labels.password}</label>
+      <input id="pw" type="password" value={pw} onChange={(e) => setPw(e.target.value)} autoFocus autoComplete="current-password"
+        aria-invalid={err} aria-describedby={err ? 'pw-err' : undefined}
+        className="w-full rounded-xl border border-rule bg-surface px-4 py-3 text-lg text-ink outline-none focus:border-accent" />
+      {err && <p id="pw-err" className="text-base delta-bad">{labels.wrong}</p>}
+      <button type="submit" disabled={busy || !pw} className="w-full rounded-xl bg-ink py-3 text-lg font-semibold text-page disabled:opacity-50">{labels.signIn}</button>
     </form>
   );
 }

@@ -1,4 +1,7 @@
 'use client';
 export default function PrintButton({ label }: { label: string }) {
-  return <button type="button" onClick={() => window.print()} className="no-print rounded-md border border-line px-3 py-1.5 text-xs font-semibold text-mist-300 hover:border-mist-500 hover:text-white">{label}</button>;
+  return (
+    <button type="button" data-print onClick={() => window.print()}
+      className="no-print rounded-full border border-rule px-4 py-2 text-base font-medium text-ink hover:border-ink-3">{label}</button>
+  );
 }

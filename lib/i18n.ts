@@ -1,103 +1,57 @@
-import type { Lang } from './types';
+import type { L, Lang } from './types';
 
+/** Shared interface strings. Page-specific copy lives next to the page as bilingual {en, ar} pairs. */
 export const T = {
-  brand: { en: 'RASD', ar: 'رصد' },
-  tagline: { en: 'A daily economic situation picture for Saudi Arabia', ar: 'صورة الوضع الاقتصادي اليومية للمملكة العربية السعودية' },
+  brand: { en: 'Rasd', ar: 'رصد' },
+  tagline: { en: 'Daily economic situation picture, Kingdom of Saudi Arabia', ar: 'صورة الوضع الاقتصادي اليومية، المملكة العربية السعودية' },
   by: { en: 'AI Economic Pulse', ar: 'AI Economic Pulse' },
-  asOf: { en: 'as of', ar: 'حتى' },
-  riyadh: { en: 'Riyadh', ar: 'الرياض' },
   situation: { en: 'Situation', ar: 'الوضع' },
   brief: { en: 'Daily brief', ar: 'الموجز اليومي' },
-  modules: { en: 'Modules', ar: 'الوحدات' },
-  overall: { en: 'OVERALL', ar: 'التقييم العام' },
-  shelves: { en: 'Shelves & prices', ar: 'الأرفف والأسعار' },
-  shelvesQ: { en: 'Are shelves and prices holding?', ar: 'هل الأرفف والأسعار صامدة؟' },
-  supply: { en: 'Supply & routes', ar: 'الإمداد والمسارات' },
-  supplyQ: { en: 'What is at sea, and what breaks if a strait closes?', ar: 'ما الذي في البحر، وما الذي يتعطل إذا أُغلق المضيق؟' },
-  confidence: { en: 'Confidence', ar: 'الثقة' },
-  confidenceQ: { en: 'Is confidence holding?', ar: 'هل الثقة متماسكة؟' },
-  foodCpi: { en: 'Food CPI', ar: 'مؤشر أسعار الغذاء' },
-  cpiOverall: { en: 'CPI overall', ar: 'المؤشر العام' },
-  wow: { en: 'w/w', ar: 'أسبوعياً' },
-  d1: { en: 'd/d', ar: 'يومياً' },
-  productsTracked: { en: 'products tracked daily', ar: 'منتج يُتابع يومياً' },
-  fastestRising: { en: 'Fastest rising, week on week', ar: 'الأسرع ارتفاعاً أسبوعياً' },
-  hormuz: { en: 'Hormuz', ar: 'هرمز' },
-  hormuzState: { open: { en: 'OPEN', ar: 'مفتوح' }, restricted: { en: 'RESTRICTED', ar: 'مقيّد' }, closed: { en: 'CLOSED', ar: 'مغلق' } },
-  cpiAtRisk: { en: 'CPI basket via Hormuz', ar: 'سلة المؤشر عبر هرمز' },
-  importsViaHormuz: { en: 'Imports via Hormuz', ar: 'واردات عبر هرمز' },
-  topAtRisk: { en: 'Food most exposed — and the fastest alternative', ar: 'الغذاء الأكثر تعرضاً — وأسرع بديل' },
-  economy: { en: 'The economy', ar: 'الاقتصاد' },
-  economyQ: { en: 'Is growth holding?', ar: 'هل يصمد النمو؟' },
-  m4: { en: '4w', ar: '٤ أسابيع' },
-  yoy: { en: 'y/y', ar: 'سنوياً' },
-  highest: { en: 'Highest vs base 100', ar: 'الأعلى مقابل الأساس 100' },
-  categories: { en: 'Categories · level, w/w, Hormuz exposure', ar: 'الفئات · المستوى، أسبوعياً، التعرّض لهرمز' },
-  sinceWar: { en: 'Since 28 Feb 2026', ar: 'منذ 28 فبراير 2026' },
-  sinceWarSub: { en: 'pre-war average → average since', ar: 'متوسط ما قبل الحرب ← المتوسط منذ' },
-  worstSinceWar: { en: 'Hardest hit since the war', ar: 'الأكثر تضرراً منذ الحرب' },
-  basket: { en: 'Tracked basket through Hormuz', ar: 'السلة المتابَعة عبر هرمز' },
-  directProducts: { en: 'products shipped direct through Hormuz', ar: 'منتجاً يُشحن مباشرة عبر هرمز' },
-  rawRisk: { en: 'with imported raw material at risk', ar: 'بمواد خام مستوردة معرّضة' },
-  ofWeight: { en: 'of basket weight', ar: 'من وزن السلة' },
-  stockoutsNA: { en: 'Stock-outs: not tracked yet — needs an availability flag in the retail scraper.', ar: 'نفاد المخزون: غير متابَع بعد — يتطلب مؤشر توافر في جامع الأسعار.' },
-  importsViaHormuzSub: { en: 'of imports', ar: 'من الواردات' },
-  foodViaHormuz: { en: 'Food imports via Hormuz', ar: 'واردات الغذاء عبر هرمز' },
-  critical: { en: 'Critical products', ar: 'منتجات حرجة' },
-  ofProducts: { en: 'of', ar: 'من' },
-  portCalls: { en: 'Port calls / week', ar: 'رسو السفن / أسبوع' },
-  vs2025: { en: 'vs 2025 avg', ar: 'مقابل متوسط 2025' },
-  portCallsTrend: { en: 'Port calls, last 52 weeks', ar: 'رسو السفن، آخر 52 أسبوعاً' },
-  corridors: { en: 'Hormuz-free ways in', ar: 'مسارات الدخول دون هرمز' },
-  atRisk: { en: 'at risk', ar: 'معرّض' },
-  gdp: { en: 'GDP · annualised', ar: 'الناتج المحلي · سنوياً' },
-  gdpSub: { en: 'USD trillions · weekly pace × 52 · composite nowcast, not GASTAT', ar: 'تريليون دولار · المعدل الأسبوعي × 52 · تقدير مركّب، ليس الهيئة العامة للإحصاء' },
-  oilGdp: { en: 'Oil GDP', ar: 'الناتج النفطي' },
-  nonOilGdp: { en: 'Non-oil GDP', ar: 'الناتج غير النفطي' },
-  momentum: { en: '4-week momentum', ar: 'زخم 4 أسابيع' },
-  oilShare: { en: 'oil share', ar: 'حصة النفط' },
-  spending: { en: 'Consumer spending', ar: 'الإنفاق الاستهلاكي' },
-  spendingSub: { en: 'volume index', ar: 'مؤشر الحجم' },
-  employment: { en: 'Employment', ar: 'التوظيف' },
-  investment: { en: 'Investment confidence', ar: 'ثقة الاستثمار' },
-  annual: { en: 'Annual ledger', ar: 'السجل السنوي' },
-  annualSub: { en: 'year averages · GDP $T · Brent · port calls/wk', ar: 'متوسطات سنوية · الناتج $T · برنت · رسو/أسبوع' },
-  ytd: { en: 'to date', ar: 'حتى الآن' },
-  trend52: { en: 'last 52 weeks', ar: 'آخر 52 أسبوعاً' },
-  deskSet: { en: 'set by the desk', ar: 'يحدّده المكتب' },
-  provenance: { en: 'Data: KSA Economic Intelligence Platform datasets (weekly indicators, non-core CPI, retail basket, UN Comtrade 2024 exposure) refreshed daily; press sentiment live.', ar: 'البيانات: مجموعات بيانات منصة الذكاء الاقتصادي السعودية (المؤشرات الأسبوعية، المؤشر غير الأساسي، السلة التجارية، تعرّض كومتريد 2024) تُحدَّث يومياً؛ معنويات الصحافة مباشرة.' },
-  hzGrade: { HIGH: { en: 'high', ar: 'مرتفع' }, MEDIUM: { en: 'medium', ar: 'متوسط' }, LOW: { en: 'low', ar: 'منخفض' }, NONE: { en: 'none', ar: 'لا يوجد' }, INDEX: { en: '—', ar: '—' } },
-  brent: { en: 'Brent', ar: 'برنت' },
-  tasi: { en: 'TASI', ar: 'تاسي' },
-  samaRate: { en: 'SAMA rate', ar: 'سعر ساما' },
-  pmi: { en: 'PMI', ar: 'مؤشر مديري المشتريات' },
-  sentiment: { en: 'Press sentiment', ar: 'معنويات الصحافة' },
-  sentimentSub: { en: 'pooled daily score, −1 to +1', ar: 'درجة يومية مجمّعة، من −1 إلى +1' },
-  headlines: { en: 'Headlines that mattered', ar: 'العناوين المهمة' },
-  alerts: { en: 'Alerts', ar: 'التنبيهات' },
-  openModule: { en: 'Open', ar: 'فتح' },
-  source: { en: 'Source', ar: 'المصدر' },
-  sample: { en: 'SAMPLE — source not wired', ar: 'عينة — المصدر غير موصول' },
-  live: { en: 'LIVE', ar: 'مباشر' },
-  daily: { en: 'DAILY', ar: 'يومي' },
-  info: { en: 'INFO', ar: 'معلومة' },
-  points: { en: 'pts', ar: 'نقطة' },
+  sources: { en: 'Sources', ar: 'المصادر' },
   signIn: { en: 'Sign in', ar: 'تسجيل الدخول' },
-  password: { en: 'Access code', ar: 'رمز الدخول' },
   signOut: { en: 'Sign out', ar: 'خروج' },
-  authorized: { en: 'Authorised personnel only. Access is logged.', ar: 'للمخوّلين فقط. يُسجَّل الدخول.' },
-  briefTitle: { en: 'Daily brief', ar: 'الموجز اليومي' },
-  briefSub: { en: 'Four questions, one page, before the morning meeting.', ar: 'أربعة أسئلة، صفحة واحدة، قبل اجتماع الصباح.' },
-  print: { en: 'Print / save as PDF', ar: 'طباعة / حفظ PDF' },
-  indicators: { en: 'All figures are indicators built from public and partner data; the Kingdom’s own feeds make them an operating picture.', ar: 'جميع الأرقام مؤشرات مبنية على بيانات عامة وبيانات شركاء؛ بيانات المملكة تجعلها صورة تشغيلية.' },
-  modulesSub: { en: 'The platforms the picture is composed from. Each opens in its own window.', ar: 'المنصات التي تتكوّن منها الصورة. تُفتح كل منها في نافذة مستقلة.' },
-  feedsLive: { en: 'Feeding Rasd now', ar: 'يغذّي رصد الآن' },
-  feedsToWire: { en: 'To wire', ar: 'للربط' },
-} as const;
+  password: { en: 'Access code', ar: 'رمز الدخول' },
+  wrongCode: { en: 'That access code is not right. Check it and try again.', ar: 'رمز الدخول غير صحيح. تحقّق منه وأعد المحاولة.' },
+  authorized: { en: 'For authorised personnel. Access is logged.', ar: 'للمخوّلين فقط. يُسجَّل الدخول.' },
+  riyadh: { en: 'Riyadh time', ar: 'بتوقيت الرياض' },
+  print: { en: 'Print or save as PDF', ar: 'طباعة أو حفظ PDF' },
+  openPlatform: { en: 'Open platform', ar: 'فتح المنصة' },
+  themeDark: { en: 'Switch to the dark theme', ar: 'التحويل إلى الوضع الداكن' },
+  themeLight: { en: 'Switch to the light theme', ar: 'التحويل إلى الوضع الفاتح' },
+  otherLang: { en: 'العربية', ar: 'English' },
+  indicators: {
+    en: 'Every figure is an indicator built from public and partner data. Connected to the Kingdom’s own feeds, it becomes an operating picture.',
+    ar: 'جميع الأرقام مؤشرات مبنية على بيانات عامة وبيانات شركاء، وتصبح صورة تشغيلية عند ربطها ببيانات المملكة.',
+  },
+} as const satisfies Record<string, L>;
 
 export type Key = keyof typeof T;
-export const t = (lang: Lang, key: Key): string => {
-  const v = T[key] as unknown as Record<string, string>;
-  return v[lang] ?? v.en;
-};
+export const t = (lang: Lang, key: Key): string => T[key][lang];
+export const tx = (l: L, lang: Lang): string => l[lang];
 export const dir = (lang: Lang) => (lang === 'ar' ? 'rtl' : 'ltr');
+
+/** Dates: Gregorian with Latin digits in both languages; the Arabic header adds the Hijri date. */
+export const DATE_LOCALE: Record<Lang, string> = { en: 'en-GB', ar: 'ar-SA-u-nu-latn-ca-gregory' };
+export const HIJRI_LOCALE = 'ar-SA-u-nu-latn-ca-islamic-umalqura';
+export function fmtDate(iso: string, lang: Lang, opts: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'long', year: 'numeric' }) {
+  const d = iso.length <= 10 ? new Date(`${iso}T00:00:00Z`) : new Date(iso);
+  return d.toLocaleDateString(DATE_LOCALE[lang], { timeZone: iso.length <= 10 ? 'UTC' : 'Asia/Riyadh', ...opts });
+}
+
+/**
+ * Keep signed figures, money and percentages reading left-to-right inside Arabic sentences
+ * ("+6.5%", not "6.5%+") by wrapping them in Unicode isolates. Years, dates and plain counts are left alone.
+ */
+const LRI = '⁦', PDI = '⁩';
+export const isoNums = (s: string) =>
+  s.replace(/[+−-]?\$?\d[\d,]*(?:\.\d+)?(?:%|T\b|B\b|M\b)?/g, (m) => (/^[+−-]|\$|%/.test(m) ? `${LRI}${m}${PDI}` : m));
+/** Apply isoNums to every Arabic string in a nested {en, ar} structure. */
+export function isoDeep<T>(x: T): T {
+  if (Array.isArray(x)) return x.map(isoDeep) as unknown as T;
+  if (x && typeof x === 'object') {
+    const o: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(x as Record<string, unknown>)) o[k] = k === 'ar' && typeof v === 'string' ? isoNums(v) : isoDeep(v);
+    return o as T;
+  }
+  return x;
+}
