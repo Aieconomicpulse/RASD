@@ -1,5 +1,5 @@
 {
-  "_comment": "The AI Economic Pulse platforms for the Kingdom that Rasd sits on top of. Each is a Vercel project in the economicpulse team. 'feeds' lists what the situation picture takes from it today and what still needs a JSON endpoint (see README › Wiring).",
+  "_comment": "The AI Economic Pulse platforms for the Kingdom that Rasd sits on top of. Each is a Vercel project in the economicpulse team. 'feeds' lists what the situation picture takes from it today (refreshed daily by scripts/refresh-ksa-data.mjs, or live at request time) and what would still add to the picture.",
   "modules": [
     {
       "id": "foodwatch",
@@ -10,10 +10,13 @@
       "panel": "shelves",
       "summary": "154 food products tracked daily across Saudi retail sources; weekly non-core CPI by category; source-country → route → category flows; Hormuz exposure per product with Hormuz-free alternatives; executive brief; AI CPI advisor.",
       "feeds": {
-        "live": [],
+        "live": [
+          "weekly non-core CPI by category (base 100), food index and CPI overall → panel 01",
+          "tracked retail basket (171 products: weight, origin, raw material, Hormuz flag) → panel 01 basket exposure",
+          "UN Comtrade 2024 Hormuz exposure per HS6 (critical + top-200 lists, alternatives, corridors) → panel 02"
+        ],
         "to_wire": [
-          "/api/cpi-latest → food CPI index, weekly change, fastest-rising categories, products tracked",
-          "/api/hormuz-exposure → CPI weight at risk, direct/partial counts, top at-risk products with alternatives"
+          "out-of-stock detection in the retail price scraper (available:false per SKU × retailer) → stock-outs"
         ]
       }
     },
@@ -27,11 +30,11 @@
       "summary": "Weekly GDP tracker (total, oil, non-oil), twelve indicators (Brent, port calls, TASI, SAMA rate, PMI, employment, spending, investment confidence), daily press sentiment, AI macro advisor.",
       "feeds": {
         "live": [
-          "/api/news-sentiment → daily pooled sentiment score, band, headlines (open endpoint)"
+          "weekly GDP nowcast (total, oil, non-oil), Brent, TASI, SAMA rate, PMI, port calls, spending, employment, investment → panels 02–04",
+          "/api/news-sentiment → daily pooled sentiment score, band, headlines (live at request time) → panel 03"
         ],
         "to_wire": [
-          "/api/macro-latest → GDP nowcast, TASI, SAMA rate, PMI, port calls (weekly)",
-          "/api/oil-price → Brent (currently failing: model ID claude-sonnet-4-20250514 no longer exists — update the model string)"
+          "/api/oil-price → daily Brent (currently failing: model ID claude-sonnet-4-20250514 no longer exists — update the model string)"
         ]
       }
     },
@@ -46,7 +49,7 @@
       "feeds": {
         "live": [],
         "to_wire": [
-          "/api/ksa-routes → Hormuz status, imports via Hormuz %, inbound vessels by port, rerouting options and transit days"
+          "/api/ksa-routes → inbound vessels bound for Saudi ports by type and ETA; days of supply at Gulf and Red Sea ports"
         ]
       }
     },
@@ -61,7 +64,7 @@
       "feeds": {
         "live": [],
         "to_wire": [
-          "/api/market-latest → TASI level and daily change, sector moves, breadth"
+          "/api/market-latest → TASI daily change, sector moves, breadth (the weekly TASI already comes from the macro series)"
         ]
       }
     },

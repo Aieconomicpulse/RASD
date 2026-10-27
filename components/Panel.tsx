@@ -3,8 +3,8 @@ import StatusChip from './StatusChip';
 import type { Lang, Status } from '@/lib/types';
 import { t } from '@/lib/i18n';
 
-export default function Panel({ lang, status, title, question, index, sample, source, children }:
-  { lang: Lang; status: Status; title: string; question: string; index: string; sample?: boolean; source?: string; children: ReactNode }) {
+export default function Panel({ lang, status, title, question, index, sample, source, fresh = 'daily', children }:
+  { lang: Lang; status: Status; title: string; question: string; index: string; sample?: boolean; source?: string; fresh?: 'live' | 'daily' | 'mixed'; children: ReactNode }) {
   return (
     <section className="card flex flex-col overflow-hidden">
       <div className={`h-1 w-full bar-${status}`} />
@@ -18,7 +18,7 @@ export default function Panel({ lang, status, title, question, index, sample, so
       <div className="flex-1 px-5 pb-5 pt-4">{children}</div>
       <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line px-5 py-2 text-[11px] text-mist-500">
         <span className="truncate">{t(lang, 'source')}: {source}</span>
-        {sample ? <span className="chip chip-watch">{t(lang, 'sample')}</span> : <span className="chip chip-normal">{t(lang, 'live')}</span>}
+        {sample ? <span className="chip chip-watch">{t(lang, 'sample')}</span> : <span className="chip chip-normal">{fresh === 'live' ? t(lang, 'live') : fresh === 'mixed' ? `${t(lang, 'daily')} + ${t(lang, 'live')}` : t(lang, 'daily')}</span>}
       </div>
     </section>
   );

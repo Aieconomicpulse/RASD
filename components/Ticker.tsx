@@ -1,19 +1,22 @@
 import type { Snapshot } from '@/lib/types';
 
 const f = (n: number, d = 1) => n.toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
-const s = (n?: number, d = 1) => (n === undefined ? '' : `${n > 0 ? '+' : ''}${f(n, d)}%`);
+const s = (n?: number | null, d = 1) => (n === undefined || n === null ? '' : `${n > 0 ? '+' : ''}${f(n, d)}%`);
 
 export default function Ticker({ snap }: { snap: Snapshot }) {
+  const { shelves: sh, supply: su, confidence: co, economy: ec } = snap;
   const items = [
-    ['BRENT', `$${f(snap.confidence.brent.value)}`, s(snap.confidence.brent.d1)],
-    ['TASI', f(snap.confidence.tasi.value, 0), s(snap.confidence.tasi.d1)],
-    ['FOOD CPI', f(snap.shelves.foodCpi.value), `${s(snap.shelves.foodCpi.wow)} w/w`],
-    ['HORMUZ', snap.supply.hormuz.state.toUpperCase(), `${f(snap.supply.exposure.importsViaHormuzPct, 0)}% of imports`],
-    ['PORT CALLS', `${snap.supply.portCalls.weekly}/wk`, s(snap.supply.portCalls.wow)],
-    ['DAYS OF SUPPLY · GULF', `${snap.supply.inbound.daysOfSupplyGulfPorts}d`, `Red Sea ${snap.supply.inbound.daysOfSupplyRedSeaPorts}d`],
-    ['SENTIMENT', `${snap.confidence.sentiment.score > 0 ? '+' : ''}${f(snap.confidence.sentiment.score, 2)}`, snap.confidence.sentiment.band],
-    ['STOCK-OUTS', String(snap.shelves.stockouts.count), 'product × city'],
-    ['SAMA', `${f(snap.confidence.samaRate, 2)}%`, `PMI ${f(snap.confidence.pmi)}`],
+    ['BRENT', `$${f(co.brent.value)}`, `${s(co.brent.wow)} w/w`],
+    ['TASI', f(co.tasi.value, 0), `${s(co.tasi.wow)} w/w`],
+    ['FOOD CPI', f(sh.foodCpi.value), `${s(sh.foodCpi.wow)} w/w · ${s(sh.foodCpi.m4)} 4w`],
+    ['CPI', f(sh.cpiOverall.value), `${s(sh.cpiOverall.wow)} w/w`],
+    ['HORMUZ', su.hormuz.state.toUpperCase(), `${f(su.exposure.importsViaHormuzPct)}% of imports`],
+    ['PORT CALLS', `${su.portCalls.weekly}/wk`, `${s(su.portCalls.wow)} w/w · ${s(su.portCalls.vs2025, 0)} vs 2025`],
+    ['GDP', `$${f(ec.gdp.totalUsdT, 2)}T`, `${s(ec.gdp.momentum4w)} 4w`],
+    ['NON-OIL GDP', `$${f(ec.gdp.nonOilUsdT, 2)}T`, `${f(100 - ec.gdp.oilShare, 0)}% of GDP`],
+    ['SPENDING', f(ec.spending.value), `${s(ec.spending.wow)} w/w · ${s(ec.spending.yoy)} y/y`],
+    ['PMI', f(co.pmi), `SAMA ${f(co.samaRate, 2)}%`],
+    ['SENTIMENT', `${co.sentiment.score > 0 ? '+' : ''}${f(co.sentiment.score, 2)}`, co.sentiment.band],
   ];
   const row = items.map(([k, v, d], i) => (
     <span key={i} className="mx-5 inline-flex items-baseline gap-2 whitespace-nowrap">

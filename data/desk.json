@@ -1,0 +1,10 @@
+{
+  "_comment": "Desk inputs — the few things no feed decides. Set each morning (or host a copy and point DESK_URL at it). hormuz.state: open | restricted | closed. alerts: optional hand-written items, same shape as the derived ones.",
+  "hormuz": {
+    "state": "restricted",
+    "since": "2026-02-28",
+    "note_en": "Transits limited since 28 Feb 2026; Red Sea ports carrying the diverted volume.",
+    "note_ar": "العبور محدود منذ 28 فبراير 2026؛ موانئ البحر الأحمر تستوعب الحجم المحوَّل."
+  },
+  "alerts": []
+}

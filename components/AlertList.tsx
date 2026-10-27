@@ -18,7 +18,7 @@ export default function AlertList({ alerts, lang }: { alerts: Snapshot['alerts']
               <div className="text-sm leading-snug text-mist-100">{lang === 'ar' ? a.text_ar : a.text_en}</div>
               <div className="num mt-0.5 text-[11px] text-mist-500">
                 {new Date(a.time).toLocaleTimeString(lang === 'ar' ? 'ar-SA-u-nu-latn' : 'en-GB', { hour: '2-digit', minute: '2-digit', timeZone: tz })} {t(lang, 'riyadh')}
-                {a.panel ? ` · ${t(lang, a.panel as 'shelves' | 'supply' | 'confidence')}` : ''}
+                {a.panel ? ` · ${t(lang, a.panel)}` : ''}
               </div>
             </div>
           </li>

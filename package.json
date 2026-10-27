@@ -8,7 +8,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "snapshot": "node scripts/build-snapshot.mjs"
+    "refresh": "node scripts/refresh-ksa-data.mjs"
   },
   "dependencies": {
     "next": "15.3.3",

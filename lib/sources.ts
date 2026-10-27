@@ -1,8 +1,9 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import type { SentimentReading, Snapshot } from './types';
+import { sentimentBand } from './sentiment';
+import type { Desk, SentimentReading } from './types';
 
-const REVALIDATE = 1800; // seconds — every source is re-fetched at most twice an hour
+const REVALIDATE = 1800; // seconds — every remote source is re-fetched at most twice an hour
 
 async function getJson<T>(url: string, revalidate = REVALIDATE): Promise<T | null> {
   try {
@@ -12,26 +13,17 @@ async function getJson<T>(url: string, revalidate = REVALIDATE): Promise<T | nul
   } catch { return null; }
 }
 
-/** Base snapshot: hosted SNAPSHOT_URL → data/snapshot.json (built by scripts/build-snapshot.mjs) → the sample. */
-export async function loadBaseSnapshot(): Promise<Snapshot> {
-  const hosted = process.env.SNAPSHOT_URL;
-  if (hosted) { const s = await getJson<Snapshot>(hosted); if (s) return s; }
-  for (const file of ['snapshot.json', 'snapshot.sample.json']) {
-    try {
-      const raw = await fs.readFile(path.join(process.cwd(), 'data', file), 'utf8');
-      return JSON.parse(raw) as Snapshot;
-    } catch { /* try next */ }
-  }
-  throw new Error('No snapshot available');
-}
-
-/** Band from a pooled daily score, −1…+1 (same bands the KSA platform uses). */
-export function sentimentBand(score: number): string {
-  if (score >= 0.6) return 'strongly positive';
-  if (score >= 0.2) return 'positive';
-  if (score > -0.2) return 'neutral';
-  if (score > -0.6) return 'negative';
-  return 'strongly negative';
+/**
+ * Desk inputs — the few things no feed can decide (the Hormuz state, a hand-written alert).
+ * A hosted DESK_URL lets the desk change them without a deploy; otherwise data/desk.json ships with the build.
+ */
+export async function loadDesk(): Promise<Desk | null> {
+  const hosted = process.env.DESK_URL;
+  if (hosted) { const d = await getJson<Desk>(hosted, 300); if (d) return d; }
+  try {
+    const raw = await fs.readFile(path.join(process.cwd(), 'data', 'desk.json'), 'utf8');
+    return JSON.parse(raw) as Desk;
+  } catch { return null; }
 }
 
 interface KsaSentimentApi {
@@ -39,7 +31,7 @@ interface KsaSentimentApi {
   source?: string;
 }
 
-/** Live overlay from the KSA platform's open news-sentiment endpoint. */
+/** Live overlay from the KSA platform's news-sentiment endpoint (the only part of the picture fetched at request time). */
 export async function fetchSentiment(): Promise<SentimentReading | null> {
   const url = process.env.SOURCE_SENTIMENT_URL;
   if (!url) return null;
@@ -56,14 +48,4 @@ export async function fetchSentiment(): Promise<SentimentReading | null> {
     headlines: last.headlines.filter((h) => h.important).slice(0, 8).map((h) => ({ headline: h.headline, source: h.source, sentiment: h.sentiment, score: h.score, important: h.important, date: h.date })),
     live: true,
   };
-}
-
-/**
- * Partial overlays for the other panels. Each expects a JSON object shaped like the matching
- * block of the snapshot (see data/snapshot.sample.json). Missing fields keep the base values.
- */
-export async function fetchOverlay<T extends object>(envName: string): Promise<Partial<T> | null> {
-  const url = process.env[envName];
-  if (!url) return null;
-  return getJson<Partial<T>>(url);
 }
