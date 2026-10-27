@@ -1,0 +1,26 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root { color-scheme: dark; }
+html { background: #05080F; }
+body { @apply bg-ink-950 text-mist-100 font-sans antialiased; }
+[dir='rtl'] body, [dir='rtl'] { font-family: 'IBM Plex Sans Arabic', 'IBM Plex Sans', system-ui, sans-serif; }
+
+.card { @apply rounded-xl border border-line bg-ink-900/80 shadow-[0_0_0_1px_rgba(255,255,255,0.02)_inset]; }
+.label { @apply text-[10px] font-semibold uppercase tracking-[0.18em] text-mist-500; }
+.num { @apply font-mono tabular-nums; }
+.chip { @apply inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-[10px] font-bold tracking-[0.14em]; }
+.chip-normal { @apply bg-pulse-green/15 text-pulse-green; }
+.chip-watch { @apply bg-pulse-amber/15 text-pulse-amber; }
+.chip-alert { @apply bg-pulse-red/15 text-pulse-red; }
+.chip-critical { @apply bg-pulse-red text-white; }
+.chip-info { @apply bg-pulse-blue/15 text-pulse-blue; }
+.bar-normal { @apply bg-pulse-green; } .bar-watch { @apply bg-pulse-amber; } .bar-alert { @apply bg-pulse-red; } .bar-critical { @apply bg-pulse-red; }
+
+@media print {
+  html { background: #fff; }
+  body { @apply bg-white text-black; }
+  .card { @apply border-gray-300 bg-white shadow-none; }
+  .no-print { display: none !important; }
+}

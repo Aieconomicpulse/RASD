@@ -1,0 +1,84 @@
+{
+  "_comment": "The AI Economic Pulse platforms for the Kingdom that Rasd sits on top of. Each is a Vercel project in the economicpulse team. 'feeds' lists what the situation picture takes from it today and what still needs a JSON endpoint (see README › Wiring).",
+  "modules": [
+    {
+      "id": "foodwatch",
+      "name": "Hormuz FoodWatch",
+      "name_ar": "مرصد الغذاء — هرمز",
+      "project": "ksa-cpi-intelligence-v2-fh4f",
+      "url": "https://ksa-cpi-intelligence-v2-fh4f.vercel.app/",
+      "panel": "shelves",
+      "summary": "154 food products tracked daily across Saudi retail sources; weekly non-core CPI by category; source-country → route → category flows; Hormuz exposure per product with Hormuz-free alternatives; executive brief; AI CPI advisor.",
+      "feeds": {
+        "live": [],
+        "to_wire": [
+          "/api/cpi-latest → food CPI index, weekly change, fastest-rising categories, products tracked",
+          "/api/hormuz-exposure → CPI weight at risk, direct/partial counts, top at-risk products with alternatives"
+        ]
+      }
+    },
+    {
+      "id": "macro",
+      "name": "KSA Macroeconomic Pulse",
+      "name_ar": "نبض الاقتصاد الكلي",
+      "project": "ksa-cpi-intelligence-v2-fh4f",
+      "url": "https://ksa-cpi-intelligence-v2-fh4f.vercel.app/",
+      "panel": "confidence",
+      "summary": "Weekly GDP tracker (total, oil, non-oil), twelve indicators (Brent, port calls, TASI, SAMA rate, PMI, employment, spending, investment confidence), daily press sentiment, AI macro advisor.",
+      "feeds": {
+        "live": [
+          "/api/news-sentiment → daily pooled sentiment score, band, headlines (open endpoint)"
+        ],
+        "to_wire": [
+          "/api/macro-latest → GDP nowcast, TASI, SAMA rate, PMI, port calls (weekly)",
+          "/api/oil-price → Brent (currently failing: model ID claude-sonnet-4-20250514 no longer exists — update the model string)"
+        ]
+      }
+    },
+    {
+      "id": "shipping",
+      "name": "GCC Shipping Intelligence",
+      "name_ar": "استخبارات الشحن الخليجي",
+      "project": "gcc-optimal-shipping-routes",
+      "url": "https://gcc-optimal-shipping-routes.vercel.app/",
+      "panel": "supply",
+      "summary": "GCC import supply chains and Hormuz chokepoint exposure across the six states; optimal and alternative routes; rerouting cost and transit comparisons.",
+      "feeds": {
+        "live": [],
+        "to_wire": [
+          "/api/ksa-routes → Hormuz status, imports via Hormuz %, inbound vessels by port, rerouting options and transit days"
+        ]
+      }
+    },
+    {
+      "id": "stocks",
+      "name": "KSA Stocks Analytics",
+      "name_ar": "تحليلات سوق الأسهم السعودية",
+      "project": "argaam-intelligence-portal-main / stocks-intelligence-portal",
+      "url": "https://argaam-intelligence-portal-main.vercel.app/",
+      "panel": "confidence",
+      "summary": "Research engine for the Saudi Exchange: company financials, peer comparisons, sector dynamics, screens, Arabic and English.",
+      "feeds": {
+        "live": [],
+        "to_wire": [
+          "/api/market-latest → TASI level and daily change, sector moves, breadth"
+        ]
+      }
+    },
+    {
+      "id": "jamarik",
+      "name": "Jamarik — Saudi customs mirror",
+      "name_ar": "جمارك — المرآة الجمركية السعودية",
+      "project": "multiple-country-jamarik",
+      "url": "https://multiple-country-jamarik.vercel.app/",
+      "panel": "supply",
+      "summary": "Trade-mirror forensics for the Kingdom: what every exporting partner reports shipping to Saudi Arabia against what the Kingdom registers, product by product — the origin-adjusted dependence and supplier-concentration view behind the supply panel. Monthly cadence.",
+      "feeds": {
+        "live": [],
+        "to_wire": [
+          "/api/ksa-dependence → import dependence and origin-adjusted supplier concentration for the forty food headings"
+        ]
+      }
+    }
+  ]
+}

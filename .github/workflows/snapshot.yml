@@ -1,0 +1,28 @@
+name: Daily snapshot
+# Builds data/snapshot.json from the wired sources at 06:15 Riyadh (03:15 UTC) and commits it,
+# so the Vercel deploy (and the 06:30 cron) picks up a fresh base picture every morning.
+on:
+  schedule:
+    - cron: '15 3 * * *'
+  workflow_dispatch:
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    permissions: { contents: write }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+      - run: node scripts/build-snapshot.mjs
+        env:
+          SOURCE_CPI_URL: ${{ secrets.SOURCE_CPI_URL }}
+          SOURCE_SUPPLY_URL: ${{ secrets.SOURCE_SUPPLY_URL }}
+          SOURCE_EXPOSURE_URL: ${{ secrets.SOURCE_EXPOSURE_URL }}
+          SOURCE_MACRO_URL: ${{ secrets.SOURCE_MACRO_URL }}
+          SOURCE_MARKETS_URL: ${{ secrets.SOURCE_MARKETS_URL }}
+      - run: |
+          git config user.name "rasd-bot"
+          git config user.email "rasd-bot@users.noreply.github.com"
+          git add -f data/snapshot.json
+          git diff --cached --quiet || git commit -m "snapshot: $(date -u +%F)"
+          git push

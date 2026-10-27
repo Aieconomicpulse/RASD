@@ -1,0 +1,9 @@
+node_modules
+.next
+out
+.env*.local
+.vercel
+data/snapshot.json
+data/brief-*.json
+*.log
+.DS_Store
