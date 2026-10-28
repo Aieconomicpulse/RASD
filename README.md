@@ -1,26 +1,28 @@
-# Rasd (رصد) — a daily economic situation picture for Saudi Arabia
+# Rasd (رصد) — the economic intelligence room for Saudi Arabia
 
-Written for a deputy minister who has five minutes before the morning meeting. The page opens with the bottom line in one sentence, then shows where four pillars stand and how far each is from its next threshold, then lists the decisions the numbers call for this week. The evidence follows: supply and routes, prices and shelves, growth and markets. Built by AI Economic Pulse on top of the Kingdom platforms the team already runs. Saudi Arabia only.
+Built for a deputy minister who has five minutes before the morning meeting. The room has three doors. **Economic monitoring** is a wall of four screens, each fed by the Kingdom platforms AI Economic Pulse already runs: GDP, inflation and products intelligence, consumer spending, economic sentiment. **Alerts** ranks what the numbers call for this week (Act now / Prepare / Monitor) and shows every signal behind the ranking with the line that would raise it. **Portals** opens each platform on its own. A daily brief memo sits beside them. Saudi Arabia only.
 
 ```
 ┌──────────────────────────────── RASD (this repo, Next.js 15) ─────────────────────────────────┐
-│  /          Situation: bottom line · scorecard · decisions · supply map · prices · growth       │
-│  /brief     Daily brief: a one-page memo (bottom line, judgments, decisions, triggers, pillars) │
-│  /modules   Sources and rules: the platforms, what each feeds, and every status threshold       │
-│  /api/situation  composed JSON incl. strategy   /api/brief   /api/sentiment   /api/cron/daily   │
+│  /                    The room: bottom line · the four screens · top alerts · the portals      │
+│  /monitor/{gdp,inflation,spending,sentiment}   one screen each: reading, threshold, charts     │
+│  /alerts              the alert system: ranked actions, key judgments, every signal and rule   │
+│  /portals             the platforms behind the room, each opening alone                        │
+│  /brief               the one-page memo · /api/situation · /api/brief · /api/cron/daily        │
 └──────────────┬──────────────────────────┬───────────────────────────────┬─────────────────────┘
                │ datasets (daily)          │ live at request time          │ desk inputs
    data/ksa/*.json                  KSA platform /api/news-sentiment     data/desk.json or DESK_URL
    (scripts/refresh-ksa-data.mjs)   (cached 30 min)                       (Hormuz state, desk notes)
 ```
 
-## What the page says, and how
+## What the room says, and how
 
 | Layer | File | What it does |
 |---|---|---|
 | Data | `lib/ksa.ts` | Computes every reading from the platform's datasets with the platform's own formulas |
 | Status | `lib/status.ts` | `RULES` and one `Condition` per measure; a pillar takes the most severe level any measure reaches; `nextThreshold()` finds the nearest line that would change it, in natural units ("Critical below 34 port calls a week; now 43, 9 away") |
 | Strategy | `lib/strategy.ts` | The bottom line, three key judgments, the scorecard, the decisions (Act now / Prepare / Monitor) and the section headlines. Every sentence is a template over the data and names its evidence; nothing is invented |
+| Monitors | `lib/monitors.ts` | The four screens: which signals each shows, its status (the worst of them), the reading on its face and the portals it draws on |
 | Brief | `lib/brief.ts`, `lib/brief-ai.ts` | The memo. With `ANTHROPIC_API_KEY` set, the model polishes the bottom line and the pillar paragraphs from the same JSON; decisions and thresholds stay computed |
 
 Decision rules, in order of what they look at: Hormuz-exposed food lines (re-route to the Red Sea ports), the west–east corridor (berths and trucks), supplier concentration (second sources, or stock where none exists at scale), the food index (consumer price measures), the oil windfall (funding the response), the fastest-rising category, the stock market, and growth. Each fires only when its condition holds and states the numbers that triggered it.
@@ -43,6 +45,7 @@ GDP is annualised the platform's way (weekly SAR millions × 52 ÷ 10⁶ ÷ 3.75
 
 ## Design
 
+- **A room, not a page.** A rail of five doors on the start side (a tab bar on a phone), a wall of screens with a status bezel along the top edge, dark by default with a designed light theme. Every screen is a door to its monitor.
 - **Bottom line first.** One sentence in the largest type on the page; every section opens with a headline that says what its numbers mean.
 - **Distance to the next threshold** sits beside every status, so the question "how close is this to breaking?" is answered without a chart.
 - **The map is the explanation.** The Kingdom between two seas: the Hormuz lane in the desk's status colour, the Red Sea lanes and the land corridors as the open doors. Server-rendered SVG, schematic, prints.
@@ -66,7 +69,8 @@ With no `PORTAL_PASSWORD` the gate is off (local convenience). Sentiment goes li
 1. Push this repo to GitHub (e.g. `Aieconomicpulse/rasd`) and **Import** it in the Vercel team. Framework: Next.js, defaults.
 2. Environment variables (Production): `PORTAL_PASSWORD`, `SESSION_SECRET`, `SOURCE_SENTIMENT_URL`, `CRON_SECRET`; optionally `ANTHROPIC_API_KEY` + `ANTHROPIC_MODEL`, `DESK_URL`.
 3. **Add a custom domain** (e.g. `rasd.economicpulse.ai`). The team's projects have Vercel Authentication on `*.vercel.app` URLs, which would put a Vercel login in front of the minister; a custom domain bypasses it and Rasd's own gate takes over.
-4. The GitHub Action (`.github/workflows/snapshot.yml`) runs `npm run refresh` at 06:15 Riyadh and commits `data/ksa/`; the push redeploys. If Deployment Protection is on for the KSA platform, put its *Protection Bypass for Automation* secret in the `KSA_BYPASS_TOKEN` repository secret.
+4. The GitHub Action (`.github/workflows/snapshot.yml`) runs `npm run refresh` at 06:15 Riyadh and commits `data/ksa/`, then calls the deploy workflow.
+   `.github/workflows/deploy.yml` deploys every push to `main` to the Vercel project with the Vercel CLI; it needs the repository secret `VERCEL_TOKEN` (Vercel → Account settings → Tokens) and carries the team and project ids. This keeps the repository on GitHub as the single source whatever Git account Vercel is connected to. If Deployment Protection is on for the KSA platform, put its *Protection Bypass for Automation* secret in the `KSA_BYPASS_TOKEN` repository secret.
 5. The cron in `vercel.json` fires `/api/cron/daily` at 06:30 Riyadh with `Authorization: Bearer $CRON_SECRET`; it revalidates the pages and warms the brief.
 6. Each morning the desk sets the Hormuz state (and any note for the minister) in `data/desk.json`, or hosts that file and points `DESK_URL` at it so no deploy is needed.
 
@@ -87,15 +91,16 @@ With no `PORTAL_PASSWORD` the gate is off (local convenience). Sentiment goes li
 ## Layout of the repo
 
 ```
-app/            pages (situation, brief, modules = sources and rules, login) and API routes
-components/     GulfMap, TrendChart, MiniTrend, Figures (Figure, Kpi, Delta, DivBar, Meter, Grade), StatusPill, toggles
-lib/            ksa.ts (readings) · status.ts (rules, thresholds) · strategy.ts (bottom line, decisions) · situation.ts (compose)
+app/            the room (/), monitor/* (four screens), alerts, portals, brief, login, and API routes
+components/     Rail, Screen, MonitorHead, AlertList, PortalLinks, Icons, GulfMap, TrendChart, MiniTrend, Figures, StatusPill, toggles
+lib/            ksa.ts (readings) · status.ts (rules, thresholds) · strategy.ts (bottom line, decisions) · monitors.ts (the screens) · situation.ts (compose)
                 sources.ts (sentiment, desk) · brief*.ts · i18n.ts · auth.ts
 config/         modules.json: the platforms Rasd draws on, EN/AR
 data/           ksa/ the platform's datasets (refreshed daily) · desk.json operator inputs
 scripts/        refresh-ksa-data.mjs, the daily pull from the KSA platform
 middleware.ts   the access gate
 vercel.json     the 06:30 Riyadh cron
+.github/        snapshot.yml (daily data refresh) · deploy.yml (deploy to Vercel on push)
 ```
 
 AI Economic Pulse · economicpulse.ai

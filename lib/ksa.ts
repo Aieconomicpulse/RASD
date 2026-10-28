@@ -190,6 +190,7 @@ function economy(): Snapshot['economy'] {
     brent: r1(avg(rows, 'oil')), portCalls: Number.isFinite(avg(rows, 'ports')) ? Math.round(avg(rows, 'ports')) : null, spending: r1(avg(rows, 'spend')),
   }));
   const last26 = (k: 'spend' | 'emp' | 'pmi'): Point[] => macro.slice(-26).map((r) => ({ date: r.date, value: r[k] }));
+  const since = (k: 'spend' | 'emp'): Point[] => macro.filter((r) => r.date >= CHART_FROM).map((r) => ({ date: r.date, value: r[k] }));
   return {
     status: 'normal', asOf: t.date,
     gdp: {
@@ -197,8 +198,8 @@ function economy(): Snapshot['economy'] {
       momentum4w: pct(annUsdT(t.gdp), annUsdT(t4.gdp)), wow: pct(t.gdp, n.gdp),
       series: g.filter((r) => r.date >= CHART_FROM).map((r) => ({ date: r.date, total: annUsdT(r.gdp), nonOil: annUsdT(r.nonOilGdp ?? 0) })),
     },
-    spending: { value: m.spend, wow: pct(m.spend, mp.spend), m4: pct(m.spend, m4.spend), yoy: yearAgo ? pct(m.spend, yearAgo.spend) : null, asOf: m.date, trend: last26('spend') },
-    employment: { value: m.emp, wow: pct(m.emp, mp.emp), m4: pct(m.emp, m4.emp), asOf: m.date, trend: last26('emp') },
+    spending: { value: m.spend, wow: pct(m.spend, mp.spend), m4: pct(m.spend, m4.spend), yoy: yearAgo ? pct(m.spend, yearAgo.spend) : null, asOf: m.date, trend: last26('spend'), series: since('spend') },
+    employment: { value: m.emp, wow: pct(m.emp, mp.emp), m4: pct(m.emp, m4.emp), asOf: m.date, trend: last26('emp'), series: since('emp') },
     investment: { value: m.invest, wow: pct(m.invest, mp.invest), asOf: m.date },
     pmi: m.pmi, pmiTrend: last26('pmi'),
     sinceWar: {

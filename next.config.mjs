@@ -2,6 +2,9 @@
 const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  async redirects() {
+    return [{ source: '/modules', destination: '/portals', permanent: true }];
+  },
   async headers() {
     return [{
       source: '/(.*)',

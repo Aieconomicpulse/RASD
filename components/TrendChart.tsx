@@ -12,12 +12,12 @@ const fmtNum = (v: number, digits: number) => v.toLocaleString('en-US', { minimu
  * A weekly line chart with one axis, hairline grid, an optional baseline and an optional event marker.
  * Lines end in a dot with a direct label; the tooltip reads every series at the hovered week.
  */
-export default function TrendChart({ data, series, lang, height = 300, digits = 1, prefix = '', suffix = '', refY, event, yDomain, title }:
+export default function TrendChart({ data, series, lang, height = 300, digits = 1, prefix = '', suffix = '', refY, event, yDomain, title, tickEvery = 'quarter' }:
   { data: Row[]; series: ChartSeries[]; lang: Lang; height?: number; digits?: number; prefix?: string; suffix?: string;
-    refY?: { y: number; label: string; position?: 'insideTopLeft' | 'insideBottomRight' | 'insideTopRight' | 'insideBottomLeft' }; event?: { date: string; label: string }; yDomain?: [number | 'auto' | 'dataMin' | 'dataMax', number | 'auto' | 'dataMin' | 'dataMax']; title: string }) {
+    refY?: { y: number; label: string; position?: 'insideTopLeft' | 'insideBottomRight' | 'insideTopRight' | 'insideBottomLeft' }; event?: { date: string; label: string }; yDomain?: [number | 'auto' | 'dataMin' | 'dataMax', number | 'auto' | 'dataMin' | 'dataMax']; title: string; tickEvery?: 'quarter' | 'month' }) {
   const dates = data.map((d) => String(d.date));
-  // one tick per quarter: the first week of Jan, Apr, Jul, Oct
-  const ticks = dates.filter((d, i) => i === 0 || (d.slice(5, 7) !== dates[i - 1].slice(5, 7) && ['01', '04', '07', '10'].includes(d.slice(5, 7))));
+  // one tick per quarter (the first point in Jan, Apr, Jul, Oct), or per month for a short daily series
+  const ticks = dates.filter((d, i) => i === 0 || (d.slice(5, 7) !== dates[i - 1].slice(5, 7) && (tickEvery === 'month' || ['01', '04', '07', '10'].includes(d.slice(5, 7)))));
   const eventX = event ? dates.find((d) => d >= event.date) : undefined;
   const tick = (d: string) => new Date(`${d}T00:00:00Z`).toLocaleDateString(LOCALE[lang], { month: 'short', year: '2-digit', timeZone: 'UTC' });
   const fmt = (v: number) => `${prefix}${fmtNum(v, digits)}${suffix}`;

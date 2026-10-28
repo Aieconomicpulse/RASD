@@ -70,6 +70,45 @@ p { text-wrap: pretty; }
 .pill-alert { background: #ec835a; color: #0b0b0b; }
 .pill-critical { background: #d03b3b; color: #ffffff; }
 
+/* ---- the room: top bar, rail, screens -------------------------------------------------------------
+   The page is the wall of a situation room: a fixed top bar, a rail of doors on the start side
+   (the bottom on a phone), and screens with a status bezel along their top edge. */
+:root { --topbar: 3.75rem; --rail: 5.75rem; --tabbar: 4.25rem; }
+.topbar { position: sticky; top: 0; z-index: 40; height: var(--topbar); border-bottom: 1px solid rgb(var(--rule)); background: rgb(var(--surface) / 0.94); backdrop-filter: blur(10px); }
+.rail { position: fixed; z-index: 30; inset-inline-start: 0; top: var(--topbar); bottom: 0; width: var(--rail); border-inline-end: 1px solid rgb(var(--rule)); background: rgb(var(--surface)); }
+.rail-list { display: flex; flex-direction: column; gap: 0.25rem; padding: 0.75rem 0.5rem; }
+.rail-link { display: flex; flex-direction: column; align-items: center; gap: 0.3rem; padding: 0.55rem 0.2rem 0.5rem; border-radius: 0.75rem; color: rgb(var(--ink-2)); font-size: 0.875rem; line-height: 1.1; text-align: center; }
+.rail-link:hover { background: rgb(var(--sunken)); color: rgb(var(--ink)); }
+.rail-link.is-active { background: rgb(var(--accent) / 0.13); color: rgb(var(--ink)); }
+.rail-link.is-active .rail-icon { color: rgb(var(--accent)); }
+.rail-icon { position: relative; display: grid; place-items: center; width: 2.75rem; height: 2.1rem; }
+.rail-badge { position: absolute; top: -0.35rem; inset-inline-end: -0.1rem; min-width: 1.3rem; height: 1.3rem; padding: 0 0.3rem; border-radius: 999px; font-size: 0.8125rem; font-weight: 700; line-height: 1.3rem; text-align: center; }
+.rail-badge-alert { background: #ec835a; color: #0b0b0b; }
+.rail-badge-watch { background: #fab219; color: #0b0b0b; }
+.rail-badge-quiet { background: rgb(var(--ink-3)); color: rgb(var(--page)); }
+.room { padding-inline-start: var(--rail); min-height: calc(100vh - var(--topbar)); }
+@media (max-width: 767px) {
+  .rail { top: auto; bottom: 0; width: 100%; height: calc(var(--tabbar) + env(safe-area-inset-bottom, 0px)); padding-bottom: env(safe-area-inset-bottom, 0px); border-inline-end: 0; border-top: 1px solid rgb(var(--rule)); }
+  .rail-list { flex-direction: row; justify-content: space-around; gap: 0; padding: 0.35rem 0.25rem; }
+  .rail-link { flex: 1 1 0; padding: 0.35rem 0.1rem; }
+  .room { padding-inline-start: 0; padding-bottom: calc(var(--tabbar) + env(safe-area-inset-bottom, 0px)); }
+}
+/* a screen on the wall: a surface with a status bezel along the top */
+.screen { position: relative; display: block; overflow: hidden; border: 1px solid rgb(var(--rule)); border-radius: 1rem; background: rgb(var(--surface)); }
+.screen::before { content: ''; position: absolute; inset: 0 0 auto 0; height: 4px; background: var(--bezel, rgb(var(--rule))); }
+.screen-normal { --bezel: #0ca30c; } .screen-watch { --bezel: #fab219; } .screen-alert { --bezel: #ec835a; } .screen-critical { --bezel: #d03b3b; }
+a.screen:hover { border-color: rgb(var(--ink-3)); }
+a.screen:focus-visible { outline-offset: 2px; }
+/* a lamp: the status colour as a small square with the shape inside, used in boards and tabs */
+.lamp { display: inline-grid; place-items: center; width: 1.6rem; height: 1.6rem; border-radius: 0.4rem; color: #0b0b0b; }
+.lamp-normal { background: #0ca30c; } .lamp-watch { background: #fab219; } .lamp-alert { background: #ec835a; } .lamp-critical { background: #d03b3b; color: #fff; }
+/* the tabs over the four monitors */
+.tabs { display: flex; gap: 0.25rem; overflow-x: auto; scrollbar-width: none; }
+.tabs::-webkit-scrollbar { display: none; }
+.tab { display: inline-flex; flex: none; align-items: center; gap: 0.5rem; padding: 0.55rem 0.9rem; border-radius: 999px; border: 1px solid transparent; color: rgb(var(--ink-2)); font-size: 1rem; white-space: nowrap; }
+.tab:hover { color: rgb(var(--ink)); background: rgb(var(--sunken)); }
+.tab.is-active { color: rgb(var(--ink)); background: rgb(var(--surface)); border-color: rgb(var(--rule)); font-weight: 600; }
+
 /* the map: labels sized in map units; minor labels drop out on narrow screens */
 .map text { font-family: inherit; }
 @media (max-width: 640px) { .map .minor { display: none; } }

@@ -1,6 +1,7 @@
 name: Daily data refresh
-# Pulls the KSA platform's datasets into data/ksa at 06:15 Riyadh (03:15 UTC) and commits them,
-# so the Vercel deploy (and the 06:30 cron) carries a fresh picture every morning.
+# Pulls the KSA platform's datasets into data/ksa at 06:15 Riyadh (03:15 UTC) and commits them, then deploys,
+# so the room carries a fresh picture every morning. (A commit made with GITHUB_TOKEN does not trigger the
+# deploy workflow by itself, hence the explicit call below.)
 on:
   schedule:
     - cron: '15 3 * * *'
@@ -9,6 +10,8 @@ jobs:
   refresh:
     runs-on: ubuntu-latest
     permissions: { contents: write }
+    outputs:
+      changed: ${{ steps.commit.outputs.changed }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -17,9 +20,20 @@ jobs:
         env:
           KSA_BASE_URL: ${{ vars.KSA_BASE_URL || 'https://ksa-cpi-intelligence-v2-fh4f.vercel.app' }}
           KSA_BYPASS_TOKEN: ${{ secrets.KSA_BYPASS_TOKEN }}
-      - run: |
+      - id: commit
+        run: |
           git config user.name "rasd-bot"
           git config user.email "rasd-bot@users.noreply.github.com"
           git add data/ksa
-          git diff --cached --quiet || git commit -m "data: KSA refresh $(date -u +%F)"
-          git push
+          if git diff --cached --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            git commit -m "data: KSA refresh $(date -u +%F)"
+            git push
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+  deploy:
+    needs: refresh
+    if: needs.refresh.outputs.changed == 'true'
+    uses: ./.github/workflows/deploy.yml
+    secrets: inherit

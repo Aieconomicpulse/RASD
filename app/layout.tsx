@@ -18,15 +18,18 @@ import '@fontsource-variable/source-serif-4/opsz.css';
 import './globals.css';
 import { currentLang, currentTheme } from '@/lib/auth';
 import { dir, t } from '@/lib/i18n';
+import { getSituation } from '@/lib/situation';
+import { alertCounts } from '@/lib/monitors';
 import LangToggle from '@/components/LangToggle';
-import NavLinks from '@/components/NavLinks';
 import HideOn from '@/components/HideOn';
+import Rail from '@/components/Rail';
 import SignOut from '@/components/SignOut';
+import StatusPill from '@/components/StatusPill';
 import ThemeToggle from '@/components/ThemeToggle';
 
 export const metadata: Metadata = {
   title: 'Rasd — Saudi Arabia',
-  description: 'The daily economic situation picture for Saudi Arabia: supply and routes, prices, markets and growth, with the decisions they call for.',
+  description: 'The economic intelligence room for Saudi Arabia: GDP, inflation and products, consumer spending and sentiment on one wall, the alerts that call for action, and the door to every platform behind them.',
   robots: { index: false, follow: false },
 };
 export const viewport: Viewport = {
@@ -35,21 +38,33 @@ export const viewport: Viewport = {
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const [lang, theme] = await Promise.all([currentLang(), currentTheme()]);
+  const [lang, theme, s] = await Promise.all([currentLang(), currentTheme(), getSituation()]);
+  const counts = alertCounts(s);
+  const asOf = new Date(s.asOf);
+  const stamp = `${asOf.toLocaleDateString(lang === 'ar' ? 'ar-SA-u-nu-latn-ca-gregory' : 'en-GB', { timeZone: 'Asia/Riyadh', day: 'numeric', month: 'short' })}, ${asOf.toLocaleTimeString('en-GB', { timeZone: 'Asia/Riyadh', hour: '2-digit', minute: '2-digit' })} ${t(lang, 'riyadh')}`;
+  const items = [
+    { href: '/', label: t(lang, 'room'), icon: 'room' as const },
+    { href: '/monitor', label: t(lang, 'monitors'), icon: 'monitoring' as const },
+    { href: '/alerts', label: t(lang, 'alerts'), icon: 'alerts' as const, badge: counts.total, badgeTone: (counts.act ? 'alert' : counts.prepare ? 'watch' : 'quiet') as 'alert' | 'watch' | 'quiet' },
+    { href: '/portals', label: t(lang, 'portals'), icon: 'portals' as const },
+    { href: '/brief', label: t(lang, 'brief'), icon: 'brief' as const },
+  ];
   return (
-    <html lang={lang} dir={dir(lang)} data-theme={theme ?? undefined} suppressHydrationWarning>
+    // The room is dark unless the viewer chose light: a wall of screens reads best unlit.
+    <html lang={lang} dir={dir(lang)} data-theme={theme ?? 'dark'} suppressHydrationWarning>
       <body className="min-h-screen">
         <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:start-4 focus:top-4 focus:z-50 focus:rounded focus:bg-surface focus:px-3 focus:py-2">{lang === 'ar' ? 'انتقل إلى المحتوى' : 'Skip to content'}</a>
-        <header className="no-print sticky top-0 z-30 border-b border-rule bg-surface/95 backdrop-blur supports-[backdrop-filter]:bg-surface/85">
-          <div className="wrap flex flex-wrap items-center gap-x-6 gap-y-2 py-3">
-            <Link href="/" className="flex items-baseline gap-2.5" aria-label={`${t(lang, 'brand')}, ${t(lang, 'situation')}`}>
+        <header className="topbar no-print">
+          <div className="flex h-full items-center gap-4 px-4 sm:px-6">
+            <Link href="/" className="flex items-baseline gap-2.5" aria-label={`${t(lang, 'brand')}, ${t(lang, 'room')}`}>
               <span className="font-display text-[1.75rem] font-bold leading-none tracking-tight text-ink" lang="en">Rasd</span>
               <span className="text-[1.75rem] font-bold leading-none text-accent" lang="ar">رصد</span>
             </Link>
-            <span className="hidden max-w-xs text-sm leading-snug text-ink-3 xl:block">{t(lang, 'tagline')}</span>
-            <HideOn paths={['/login']} fallback={<div className="ms-auto" aria-hidden />}>
-              <div className="order-last -mx-2 w-full overflow-x-auto md:order-none md:mx-0 md:ms-auto md:w-auto">
-                <NavLinks items={[{ href: '/', label: t(lang, 'situation') }, { href: '/brief', label: t(lang, 'brief') }, { href: '/modules', label: t(lang, 'sources') }]} />
+            <span className="hidden text-base text-ink-3 lg:block">{t(lang, 'tagline')}</span>
+            <HideOn paths={['/login', '/']}>
+              <div className="ms-auto hidden items-center gap-3 md:flex">
+                <StatusPill status={s.overall.status} lang={lang} />
+                <span className="tnum text-sm text-ink-2">{stamp}</span>
               </div>
             </HideOn>
             <div className="ms-auto flex items-center gap-1 sm:gap-2 md:ms-0">
@@ -60,11 +75,16 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             </div>
           </div>
         </header>
-        <div id="main">{children}</div>
-        <footer className="wrap border-t border-rule py-8 text-sm text-ink-3">
-          <p className="max-w-prose">{t(lang, 'indicators')}</p>
-          <p className="mt-2">{t(lang, 'by')}, economicpulse.ai</p>
-        </footer>
+        <HideOn paths={['/login']}><Rail items={items} label={lang === 'ar' ? 'أبواب الغرفة' : 'Doors of the room'} /></HideOn>
+        <HideOn paths={['/login']} fallback={<div id="main">{children}</div>}>
+          <div id="main" className="room">
+            {children}
+            <footer className="wrap border-t border-rule py-8 text-sm text-ink-3">
+              <p className="max-w-prose">{t(lang, 'indicators')}</p>
+              <p className="mt-2">{t(lang, 'by')}, economicpulse.ai</p>
+            </footer>
+          </div>
+        </HideOn>
       </body>
     </html>
   );

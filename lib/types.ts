@@ -72,7 +72,7 @@ export interface Snapshot {
   economy: {
     sample?: boolean; status: Status; asOf: string;
     gdp: { totalUsdT: number; oilUsdT: number; nonOilUsdT: number; oilShare: number; momentum4w: number; wow: number; series: { date: string; total: number; nonOil: number }[] };
-    spending: Delta & { trend: Point[] }; employment: Delta & { trend: Point[] }; investment: Delta; pmi: number; pmiTrend: Point[];
+    spending: Delta & { trend: Point[]; series: Point[] }; employment: Delta & { trend: Point[]; series: Point[] }; investment: Delta; pmi: number; pmiTrend: Point[];
     sinceWar: { start: string; rows: WarRow[] };
     annual: { year: string; gdpUsdT: number | null; oilUsdT: number | null; nonOilUsdT: number | null; brent: number | null; portCalls: number | null; spending: number | null; weeks: number }[];
     source: string;
@@ -82,6 +82,9 @@ export interface Snapshot {
   strategy?: Strategy;
   brief?: { date: string; en: string[]; ar: string[]; generated?: boolean };
 }
+
+/** The four monitors on the wall of the room (lib/monitors.ts). */
+export type MonitorId = 'gdp' | 'inflation' | 'spending' | 'sentiment';
 
 // ---- the strategic layer (lib/strategy.ts) ------------------------------------------------------------
 export type Priority = 'act' | 'prepare' | 'monitor';
