@@ -5,7 +5,6 @@ import { PILLAR_NAME } from '@/lib/strategy';
 import type { L, Lang } from '@/lib/types';
 import MonitorHead, { DataTable, Legend, Panel } from '@/components/MonitorHead';
 import TrendChart from '@/components/TrendChart';
-import GulfMap from '@/components/GulfMap';
 import StatusPill from '@/components/StatusPill';
 import { DivBar, Figure, Grade, Meter } from '@/components/Figures';
 
@@ -22,22 +21,14 @@ const C = {
   event: { en: '28 Feb: Hormuz disrupted', ar: '28 فبراير: اضطراب هرمز' }, week: { en: 'Week', ar: 'الأسبوع' },
   catTitle: { en: 'Food categories this week', ar: 'فئات الغذاء هذا الأسبوع' },
   colCat: { en: 'Category', ar: 'الفئة' }, colIdx: { en: 'Index', ar: 'المؤشر' }, colWow: { en: 'Week on week', ar: 'أسبوعياً' },
-  gradeNote: { en: 'The three bars grade how much each category depends on Hormuz, as rated by the platform.', ar: 'الأعمدة الثلاثة: درجة اعتماد الفئة على هرمز وفق المنصة.' },
-  basket: { en: 'The tracked basket', ar: 'السلة المتابَعة' },
-  stockouts: { en: 'Stock-outs are not tracked yet. They need an availability flag in the retail price scraper.', ar: 'نفاد المخزون غير متابَع بعد، ويتطلب مؤشر توافر في جامع أسعار التجزئة.' },
   products: { en: 'Products intelligence', ar: 'ذكاء المنتجات' },
-  productsDek: { en: 'Which imports depend on the strait, who else already ships them, and which way in stays open.', ar: 'أيّ الواردات تعتمد على المضيق، ومَن يشحنها فعلاً غيره، وأيّ المداخل يبقى مفتوحاً.' },
   importsVia: { en: 'of the Kingdom’s imports pass Hormuz', ar: 'من واردات المملكة تمرّ عبر هرمز' },
   critical: { en: 'critical products, over 70% through the strait', ar: 'منتجاً حرجاً، أكثر من 70% منها عبر المضيق' },
   foodVia: { en: 'of food imports pass Hormuz', ar: 'من واردات الغذاء تمرّ عبر هرمز' },
   exposedTitle: { en: 'Food imports most exposed to Hormuz', ar: 'واردات الغذاء الأكثر تعرضاً لهرمز' },
-  exposedDek: { en: 'In the platform’s route model these land at Dammam through the strait. The same cargo can land at the Red Sea ports.', ar: 'في نموذج المسارات لدى المنصة، تصل هذه الواردات إلى الدمام عبر المضيق، ويمكن للشحنات نفسها أن تصل إلى موانئ البحر الأحمر.' },
   colProduct: { en: 'Product', ar: 'المنتج' }, colThrough: { en: 'Through Hormuz a year', ar: 'عبر هرمز سنوياً' }, colMain: { en: 'Main supplier', ar: 'المورد الرئيسي' }, colOption: { en: 'Hormuz-free option', ar: 'بديل دون هرمز' },
   already: { en: 'already ships', ar: 'تشحن فعلاً' }, suggested: { en: 'Suggested', ar: 'مقترح' }, noScale: { en: 'No alternative supplier at scale; stock and re-routing are the hedge.', ar: 'لا مورد بديلاً بحجم كافٍ؛ المخزون وإعادة التوجيه هما صمام الأمان.' },
   ofImports: { en: 'of imports', ar: 'من الواردات' }, days: { en: 'days', ar: 'أيام' },
-  mapTitle: { en: 'The Kingdom between two seas: shipping lanes, ports and the roads east', ar: 'المملكة بين بحرين: ممرات الملاحة والموانئ والطرق نحو الشرق' },
-  lgHormuz: { en: 'Shipping lane through Hormuz', ar: 'ممر الملاحة عبر هرمز' }, lgOpen: { en: 'Lanes that avoid Hormuz', ar: 'ممرات تتجنب هرمز' }, lgRoad: { en: 'Roads into the Kingdom and on to the Eastern Province', ar: 'طرق الدخول إلى المملكة ونحو المنطقة الشرقية' },
-  mapNote: { en: 'Schematic, not to scale. Routes as modelled by the KSA platform. The Hormuz status is set by the desk each morning.', ar: 'رسم تخطيطي غير مطابق للمقياس. المسارات وفق نموذج المنصة السعودية، وحالة هرمز يحدّدها المكتب كل صباح.' },
   corridors: { en: 'Ways in that avoid Hormuz', ar: 'مسارات دخول تتجنب هرمز' }, corridorsDek: { en: 'Road distance, time and cost on to the Eastern Province.', ar: 'المسافة البرية والمدة والتكلفة حتى المنطقة الشرقية.' },
   portTitle: { en: 'Port calls a week since January 2025', ar: 'رسو السفن أسبوعياً منذ يناير 2025' }, portLabel: { en: 'Port calls', ar: 'رسو السفن' }, avg2025: { en: '2025 average', ar: 'متوسط 2025' },
 } satisfies Record<string, L>;
@@ -48,13 +39,12 @@ export default async function InflationMonitor() {
   const ar = lang === 'ar';
   const tr = (l: L) => l[lang];
   const sh = s.shelves, su = s.supply, ex = su.exposure;
-  const row = s.strategy!.scorecard.find((r) => r.pillar === 'shelves');
   const catMax = Math.max(4, ...sh.categories.map((c) => Math.abs(c.wow)));
   const hormuzWord = ar ? { open: 'مفتوح', restricted: 'مقيّد', closed: 'مغلق' }[su.hormuz.state] : su.hormuz.state;
 
   return (
     <main className="pb-12">
-      <MonitorHead s={s} lang={lang} id="inflation" meaning={row?.meaning} />
+      <MonitorHead s={s} lang={lang} id="inflation" />
 
       {/* ---------------------------------------------------------------- prices */}
       <div className="wrap mt-12 grid gap-12 lg:grid-cols-12">
@@ -69,11 +59,6 @@ export default async function InflationMonitor() {
           <div className="mt-8 grid gap-8 border-t border-rule pt-6 sm:grid-cols-2">
             <Figure value={`${sh.basket.directProducts}`} label={ar ? `منتجاً من أصل ${sh.productsTracked} تُشحن مباشرة عبر هرمز` : `of ${sh.productsTracked} tracked products ship direct through Hormuz`} note={ar ? `${f(sh.basket.directWeightPct)}% من وزن السلة` : `${f(sh.basket.directWeightPct)}% of basket weight`} />
             <Figure value={`${sh.basket.rawMaterialRiskProducts}`} label={ar ? 'منتجاً يعتمد على مواد خام مستوردة معرّضة' : 'depend on imported raw materials at risk'} note={ar ? `${f(sh.basket.rawMaterialRiskWeightPct)}% من وزن السلة` : `${f(sh.basket.rawMaterialRiskWeightPct)}% of basket weight`} />
-          </div>
-          <div className="mt-6 text-base text-ink-2">
-            <div className="eyeline">{tr(C.basket)}</div>
-            <p className="mt-1">{sh.basket.direct.slice(0, 4).map((p) => `${p.product.split(/[,(]/)[0].trim()} (${p.origin})`).join(ar ? '؛ ' : '; ')}.</p>
-            <p className="mt-2 text-sm text-ink-3">{tr(C.stockouts)}</p>
           </div>
         </Panel>
         <Panel className="lg:col-span-5" title={tr(C.catTitle)}>
@@ -94,7 +79,6 @@ export default async function InflationMonitor() {
                 </div>
               </div>
             ))}
-            <p className="mt-2 text-sm text-ink-3">{tr(C.gradeNote)}</p>
           </div>
         </Panel>
       </div>
@@ -105,7 +89,6 @@ export default async function InflationMonitor() {
           <h2 className="section-title">{tr(C.products)}</h2>
           <span className="inline-flex items-center gap-2.5"><StatusPill status={su.status} lang={lang} /><span className="text-base text-ink-2">{tr(PILLAR_NAME.supply)}{ar ? '؛ هرمز ' : '; Hormuz '}{hormuzWord}</span></span>
         </div>
-        <p className="mt-2 max-w-3xl text-lg text-ink-2">{tr(C.productsDek)}</p>
 
         <div className="mt-8 grid gap-8 md:grid-cols-3">
           <Figure value={`${f(ex.importsViaHormuzPct)}%`} label={tr(C.importsVia)} note={ar ? `${f(ex.importsViaHormuzUsdB, 0)} من ${f(ex.importsTotalUsdB, 0)} مليار دولار سنوياً، كومتريد ${ex.comtradeYear}` : `$${f(ex.importsViaHormuzUsdB, 0)}B of $${f(ex.importsTotalUsdB, 0)}B a year, UN Comtrade ${ex.comtradeYear}`} />
@@ -115,7 +98,6 @@ export default async function InflationMonitor() {
 
         <div className="mt-12">
           <h3 className="text-2xl font-semibold text-ink">{tr(C.exposedTitle)}</h3>
-          <p className="mt-1 max-w-3xl text-base text-ink-2">{tr(C.exposedDek)}</p>
           <div className="mt-5 border-t-2 border-ink">
             <div className="hidden grid-cols-12 gap-6 border-b border-rule py-3 text-sm font-medium text-ink-3 lg:grid">
               <div className="col-span-3">{tr(C.colProduct)}</div><div className="col-span-3">{tr(C.colThrough)}</div><div className="col-span-2">{tr(C.colMain)}</div><div className="col-span-4">{tr(C.colOption)}</div>
@@ -151,22 +133,15 @@ export default async function InflationMonitor() {
         </div>
 
         <div className="mt-14 grid gap-10 lg:grid-cols-12">
-          <figure className="min-w-0 lg:col-span-7">
-            <div className="overflow-x-auto rounded-2xl border border-rule bg-sea">
-              <div className="min-w-[600px]"><GulfMap lang={lang} state={su.hormuz.state} title={tr(C.mapTitle)} /></div>
+          <div className="min-w-0 lg:col-span-7">
+            <h3 className="text-2xl font-semibold text-ink">{tr(C.portTitle)}</h3>
+            <div className="mt-3">
+              <TrendChart lang={lang} title={tr(C.portTitle)} height={260} data={su.portCalls.series.map((p) => ({ date: p.date, calls: p.value as number }))} series={[{ key: 'calls', label: tr(C.portLabel), color: 'series-1' }]}
+                digits={0} yDomain={[0, 'auto']} refY={{ y: su.portCalls.avg2025, label: `${tr(C.avg2025)}: ${su.portCalls.avg2025}` }} event={{ date: s.provenance.warStart, label: tr(C.event) }} />
             </div>
-            <figcaption className="mt-4 space-y-2 text-base text-ink-2">
-              <div className="flex flex-wrap gap-x-6 gap-y-2">
-                <span className="inline-flex items-center gap-2"><svg width="34" height="8" aria-hidden><line x1="2" y1="4" x2="32" y2="4" stroke={su.hormuz.state === 'closed' ? '#d03b3b' : su.hormuz.state === 'restricted' ? '#ec835a' : '#0ca30c'} strokeWidth="3.5" strokeDasharray={su.hormuz.state === 'open' ? undefined : '8 5'} strokeLinecap="round" /></svg>{tr(C.lgHormuz)}: {hormuzWord}</span>
-                <span className="inline-flex items-center gap-2"><svg width="34" height="8" aria-hidden><line x1="2" y1="4" x2="32" y2="4" stroke="#0ca30c" strokeWidth="3" strokeLinecap="round" /></svg>{tr(C.lgOpen)}</span>
-                <span className="inline-flex items-center gap-2"><svg width="34" height="8" aria-hidden><line x1="2" y1="4" x2="32" y2="4" stroke="rgb(var(--accent))" strokeWidth="3" strokeLinecap="round" /></svg>{tr(C.lgRoad)}</span>
-              </div>
-              <p className="text-sm text-ink-3">{tr(C.mapNote)}{su.hormuz.note_en ? ` ${ar ? su.hormuz.note_ar : su.hormuz.note_en}` : ''}</p>
-            </figcaption>
-          </figure>
+          </div>
           <div className="lg:col-span-5">
             <h3 className="text-2xl font-semibold text-ink">{tr(C.corridors)}</h3>
-            <p className="mt-1 text-base text-ink-2">{tr(C.corridorsDek)}</p>
             <ul className="mt-4 divide-y divide-rule border-y border-rule">
               {su.corridors.map((c) => (
                 <li key={c.id} className="py-3">
@@ -181,11 +156,6 @@ export default async function InflationMonitor() {
                 </li>
               ))}
             </ul>
-            <h3 className="mt-10 text-2xl font-semibold text-ink">{tr(C.portTitle)}</h3>
-            <div className="mt-3">
-              <TrendChart lang={lang} title={tr(C.portTitle)} height={240} data={su.portCalls.series.map((p) => ({ date: p.date, calls: p.value as number }))} series={[{ key: 'calls', label: tr(C.portLabel), color: 'series-1' }]}
-                digits={0} yDomain={[0, 'auto']} refY={{ y: su.portCalls.avg2025, label: `${tr(C.avg2025)}: ${su.portCalls.avg2025}` }} event={{ date: s.provenance.warStart, label: tr(C.event) }} />
-            </div>
           </div>
         </div>
       </section>

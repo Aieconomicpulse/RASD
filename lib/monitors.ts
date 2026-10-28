@@ -44,6 +44,26 @@ export const MONITORS: Monitor[] = [
 
 export const monitor = (id: MonitorId) => MONITORS.find((m) => m.id === id)!;
 
+/** The signals, by condition id, as they are labelled on the gauges. */
+export const SIGNAL_NAME: Record<string, L> = {
+  portLevel: { en: 'Port calls a week', ar: 'رسو السفن أسبوعياً' },
+  portWow: { en: 'Port calls, week on week', ar: 'رسو السفن، أسبوعياً' },
+  foodWow: { en: 'Food prices, week on week', ar: 'أسعار الغذاء، أسبوعياً' },
+  food4w: { en: 'Food prices, four weeks', ar: 'أسعار الغذاء، أربعة أسابيع' },
+  sentiment: { en: 'Press sentiment', ar: 'معنويات الصحافة' },
+  tasiWow: { en: 'TASI, week on week', ar: 'تاسي، أسبوعياً' },
+  brent: { en: 'Brent against pre-war', ar: 'برنت مقابل ما قبل الحرب' },
+  momentum: { en: 'GDP momentum, four weeks', ar: 'زخم الناتج، أربعة أسابيع' },
+  pmi: { en: 'PMI', ar: 'مؤشر مديري المشتريات' },
+  spendWow: { en: 'Consumer spending, week on week', ar: 'الإنفاق الاستهلاكي، أسبوعياً' },
+};
+
+/** The conditions a monitor shows, in the order they are listed. */
+export function monitorConditions(s: Snapshot, id: MonitorId, conds = conditions(s)) {
+  const m = monitor(id);
+  return m.conditionIds.map((cid) => conds.find((c) => c.id === cid)!).filter(Boolean);
+}
+
 /** A monitor's status is the worst level among the conditions it shows. Supply's desk input is not part of any monitor; it lives in the alerts. */
 export function monitorStatus(s: Snapshot, id: MonitorId, conds = conditions(s)): Status {
   const m = monitor(id);

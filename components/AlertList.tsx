@@ -1,15 +1,36 @@
 import Link from 'next/link';
 import { PILLAR_MONITOR, monitor } from '@/lib/monitors';
 import { PILLAR_NAME, PRIORITY_LABEL } from '@/lib/strategy';
-import type { Decision, L, Lang, Priority } from '@/lib/types';
-import { PriorityMark } from './StatusPill';
+import type { Decision, L, Lang, Priority, Status } from '@/lib/types';
+import { PriorityMark, StatusShape } from './StatusPill';
 
 const RULE: Record<Priority, string> = { act: 'border-st-alert', prepare: 'border-st-watch', monitor: 'border-ink-3' };
+const SHAPE: Record<Priority, Status> = { act: 'alert', prepare: 'watch', monitor: 'normal' };
+const TONE: Record<Priority, string> = { act: 'text-st-alert', prepare: 'text-st-watch', monitor: 'text-ink-3' };
 
-/** Alerts as rows: priority, what to do, the evidence, and the monitor that shows it. */
-export default function AlertList({ lang, items, showMonitor = true, showPriority = true }: { lang: Lang; items: Decision[]; showMonitor?: boolean; showPriority?: boolean }) {
+/**
+ * Alerts as rows. Full: priority, what to do, the evidence, the monitor behind it.
+ * Compact (the room): the priority shape, the title and the monitor only.
+ */
+export default function AlertList({ lang, items, compact = false, showPriority = true }: { lang: Lang; items: Decision[]; compact?: boolean; showPriority?: boolean }) {
   const tr = (l: L) => l[lang];
   if (!items.length) return <p className="text-base text-ink-3">{lang === 'ar' ? 'لا تنبيهات في هذا المستوى اليوم.' : 'Nothing at this level today.'}</p>;
+  if (compact) {
+    return (
+      <ol className="divide-y divide-rule border-y border-rule">
+        {items.map((d) => {
+          const m = monitor(PILLAR_MONITOR[d.pillar]);
+          return (
+            <li key={d.id} className="flex items-start gap-3 py-3">
+              <StatusShape status={SHAPE[d.priority]} size={13} className={`mt-[0.45rem] ${TONE[d.priority]}`} />
+              <Link href="/alerts" className="min-w-0 flex-1 text-lg font-semibold leading-snug text-ink hover:text-accent">{tr(d.title)}</Link>
+              <Link href={m.href} className="link shrink-0 pt-1 text-sm">{tr(m.short)}</Link>
+            </li>
+          );
+        })}
+      </ol>
+    );
+  }
   return (
     <ol className="divide-y divide-rule border-y border-rule">
       {items.map((d) => {
@@ -19,11 +40,11 @@ export default function AlertList({ lang, items, showMonitor = true, showPriorit
             {showPriority && <div className="md:col-span-2"><PriorityMark priority={d.priority} label={tr(PRIORITY_LABEL[d.priority])} /></div>}
             <div className={showPriority ? 'md:col-span-7' : 'md:col-span-9'}>
               <h3 className="text-xl font-semibold leading-snug text-ink">{tr(d.title)}</h3>
-              <p className="mt-1.5 text-base leading-relaxed text-ink-2">{tr(d.body)}</p>
+              <p className="mt-1.5 text-sm leading-relaxed text-ink-2">{tr(d.body)}</p>
             </div>
             <div className="text-sm text-ink-3 md:col-span-3 md:text-end">
               <div>{tr(PILLAR_NAME[d.pillar])}</div>
-              {showMonitor && <Link href={m.href} className="link mt-1 inline-block text-sm">{lang === 'ar' ? `شاشة ${tr(m.short)}` : `${tr(m.short)} monitor`}</Link>}
+              <Link href={m.href} className="link mt-1 inline-block text-sm">{tr(m.short)}</Link>
             </div>
           </li>
         );
